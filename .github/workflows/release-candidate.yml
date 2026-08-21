@@ -36,9 +36,13 @@ jobs:
       - name: Publish candidate
         run: dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\release
 
-      - name: Hash candidate
+      - name: Generate, validate, and hash application payload
         shell: pwsh
-        run: Get-FileHash .\artifacts\release\*.exe -Algorithm SHA256 | Format-List | Out-File .\artifacts\release\SHA256SUMS.txt -Encoding utf8
+        run: |
+          .\eng\release\Test-ManagedPayloadContract.ps1 -PayloadRoot .\artifacts\release
+          .\eng\release\New-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\payload-manifest.json
+          .\eng\release\Test-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\payload-manifest.json
+          .\eng\release\New-ApplicationPayloadChecksums.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\payload-manifest.json -ChecksumsPath .\artifacts\SHA256SUMS.txt
 
       - name: Upload candidate for hardware and clean-machine testing
         uses: actions/upload-artifact@v7
@@ -46,5 +50,8 @@ jobs:
           name: HVP-release-candidate
           path: |
             artifacts/release
+            artifacts/payload-manifest.json
+            artifacts/SHA256SUMS.txt
             artifacts/test-results
           if-no-files-found: error
+          include-hidden-files: true

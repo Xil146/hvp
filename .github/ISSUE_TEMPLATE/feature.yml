@@ -60,5 +60,5 @@ body:
         - label: Windows UI/accessibility test
         - label: GPU/HDR/display hardware test
         - label: Audio receiver/passthrough test
-        - label: Clean-machine/single-file test
+        - label: Clean-machine/installed-payload test
         - label: Dependency/license review

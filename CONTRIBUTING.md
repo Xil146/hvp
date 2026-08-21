@@ -16,7 +16,7 @@ Thanks for helping build HVP. The project is pre-alpha; design documents may lan
 - Attach manual evidence for GPU, HDR, passthrough, DPI, or clean-machine claims.
 - Update public docs and third-party notices when behavior or dependencies change.
 - Do not include copyrighted movie samples, secrets, machine-specific paths, or unverified native binaries.
-- Expect review for correctness, native lifetime/threading, untrusted input, single-file compatibility, and licensing.
+- Expect review for correctness, native lifetime/threading, untrusted input, installed-payload compatibility, and licensing.
 
 See `Docs/development_workflow.md` for board stages and definitions of ready/done.
 

@@ -26,6 +26,8 @@ eng/native/cache/
 # Release/debug artifacts
 publish/
 release/
+!eng/release/
+!eng/release/**
 *.pdb
 *.dmp
 *.log

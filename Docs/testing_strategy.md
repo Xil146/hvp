@@ -34,7 +34,7 @@ Keep view-model behavior unit-testable. Add targeted Windows UI automation for o
 - Unit and non-GPU integration tests with test result artifacts.
 - Formatting and repository policy checks.
 - Dependency/license inventory, native checksum verification, and secret scan.
-- Single-file publish plus structural assertion of the expected output.
+- Self-contained multi-file publish plus manifest validation of every staged path and digest.
 - No flaky retry counted as success without a tracking issue.
 
 ## Hardware matrix

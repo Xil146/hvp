@@ -1,14 +1,14 @@
 # Packaging and distribution design
 
-Status: Accepted for the managed artifact by [`ADR 0001`](adr/0001-managed-application-foundation.md); native bundle pending separate approval
+Status: Accepted by [`ADR 0003`](adr/0003-offline-installer-and-installed-payload.md); native bundle pending its evidence gate
 
 ## User-facing artifact
 
-The primary V1 download is `HVP-win-x64.exe`: a self-contained .NET single-file publish that runs without a preinstalled .NET runtime. Managed assemblies and native dependencies are bundled into it.
+The primary V1 download is one offline Windows x64 installer. It installs one HVP application and a private multi-file directory containing the self-contained .NET runtime, HVP assemblies, libmpv, FFmpeg, codecs, supporting DLLs, notices, and other required runtime files.
 
-Native libraries are extracted by the .NET host under `%TEMP%\.net` before loading; this is one downloaded/run file, not a zero-extraction binary. The README/release notes must state this, and startup must handle an unwritable or cleaned temp directory with an actionable error.
+The installer does not download prerequisites. A user does not source .NET, codec packs, libmpv, FFmpeg, or supporting libraries. HVP does not use .NET single-file publication or runtime native extraction.
 
-An optional `HVP-win-x64-portable.zip` may place the executable and native DLLs side-by-side for contributors, diagnostics, and replacement testing. It is not the default user path.
+Phase 0 first produces a canonical staged directory. An optional `HVP-win-x64-portable.zip` may package that exact tree for contributors, diagnostics, and replacement testing. Installer technology is selected after the Phase 1 playback spike and wraps the same proven payload rather than rebuilding it.
 
 ## Publish configuration
 
@@ -19,11 +19,25 @@ An optional `HVP-win-x64-portable.zip` may place the executable and native DLLs 
   other Windows 10 22H2 use is best-effort and must not be advertised as fully
   supported.
 - `RuntimeIdentifier`: `win-x64`.
-- Self-contained and single-file enabled.
-- `IncludeNativeLibrariesForSelfExtract=true`.
+- Self-contained multi-file publish enabled; single-file publishing disabled.
+- Native self-extraction disabled; native DLLs are explicit members of the staged payload.
 - Trimming disabled for V1; revisit only with a dedicated WPF/native compatibility matrix.
 - PDBs embedded or published as a separate symbols artifact, never loose beside the user EXE by accident.
 - Deterministic/continuous-integration build settings and Source Link enabled.
+
+### Managed scaffold payload contract
+
+`eng/release/managed-payload-contract.json` is the reviewed, version-controlled
+inventory for the current managed-only publish. CI validates the publish against
+that independent contract before generating the per-file SHA-256 payload
+manifest. Missing, unexpected, case-colliding, path-escaping, or reparse-point
+entries fail the gate; the generated manifest then protects the exact candidate
+through later staging and download steps.
+
+The contract is intentionally exact and tied to the SDK/runtime pin. An approved
+SDK/runtime change must update it explicitly. Issue #6 will extend the staged
+payload with its separately approved native manifest and DLL closure rather than
+silently allowing new native files through the managed contract.
 
 ## Native dependency policy
 
@@ -45,25 +59,26 @@ native bundle must:
 - include required copyright/license notices and an SBOM;
 - receive legal review before the first public binary release. This document is engineering guidance, not legal advice.
 
-The app exposes About/Licenses and a command-line license display so notices remain accessible even when the release is a single file.
+The app exposes About/Licenses and a command-line license display, and the installed payload includes the applicable notice and license files.
 
 ## Release artifacts
 
-- `HVP-win-x64.exe`.
-- `HVP-win-x64.exe.sha256`.
+- one offline Windows x64 installer and its SHA-256 digest;
+- the canonical multi-file application payload and its relative-path/SHA-256 manifest;
 - `HVP-<version>-sbom.spdx.json`.
-- optional symbols archive and portable ZIP.
+- optional symbols archive and portable ZIP produced from the canonical payload.
 - GitHub release notes with supported OS/architecture, known HDR limitations, native versions, license/source links, hardware matrix, and unsigned/signed status.
 
 ## Release pipeline
 
 1. Build from a clean tagged commit with pinned SDK and locked dependencies.
 2. Build/obtain the approved native bundle and verify checksums/provenance.
-3. Restore, build, test, publish, and run structural single-file checks.
-4. Scan dependencies/artifacts and generate the SBOM/notices.
-5. Smoke-test the exact EXE on a clean Windows machine without .NET installed.
+3. Restore, build, test, publish, stage, scan dependencies/artifacts, and generate the SBOM/notices.
+4. Sign application binaries when configured, then generate and validate the final application-payload manifest.
+5. Before Phase 1, smoke-test the exact staged payload offline on a clean Windows machine without .NET or codec packs installed.
 6. Run and attach the hardware/HDR matrix.
-7. Sign when configured, hash after signing, and publish through a protected GitHub environment.
+7. After the playback spike is proven, build the installer from the exact staged application payload, separately inventory installer-owned files, and test offline install, launch, upgrade, uninstall, and reinstall.
+8. Sign the installer/ZIP containers when applicable, hash their final forms, and publish through a protected GitHub environment.
 
 ## Updates and signing
 
@@ -71,8 +86,10 @@ V1 has no self-updater or network check. Users download releases from GitHub. Ea
 
 ## Acceptance criteria
 
-- The primary download is one EXE and launches offline on a supported clean x64 machine.
-- Extraction behavior, cache location, cleanup expectations, and troubleshooting are documented.
+- The primary download is one offline installer and the installed application launches on a supported clean x64 machine without network access, a system .NET runtime, or codec packs.
+- The installed directory contains the complete documented DLL closure; no runtime native extraction is required.
 - Native DLL replacement works through the documented override.
 - Every binary is traceable to source, flags, checksum, and license evidence.
-- Release assets, checksums, SBOM, notices, and test evidence agree on one version.
+- The installer and optional portable ZIP reproduce the canonical application payload without modifying its files; installer-owned bookkeeping is separately inventoried.
+- Release assets, payload manifest, checksums, SBOM, notices, and test evidence agree on one version.
+- Offline install, launch, upgrade, uninstall, and reinstall pass on clean Windows.

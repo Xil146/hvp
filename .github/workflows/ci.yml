@@ -52,19 +52,19 @@ jobs:
             }
           }
 
-      - name: Publish single-file x64 app
+      - name: Publish self-contained x64 application payload
         run: dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\publish\win-x64
 
-      - name: Verify single-file publish structure
+      - name: Generate and validate application-payload manifest
         shell: pwsh
         run: |
-          $entries = @(Get-ChildItem .\artifacts\publish\win-x64 -Recurse -Force)
-          $files = @($entries | Where-Object { -not $_.PSIsContainer })
-          $executables = @($files | Where-Object Extension -EQ ".exe")
-          if ($entries.Count -ne 1 -or $files.Count -ne 1 -or $executables.Count -ne 1 -or $executables[0].Name -cne "HVP-win-x64.exe") {
-            $names = $entries.FullName -join ", "
-            throw "Expected only HVP-win-x64.exe and no loose companion files; found: $names"
-          }
+          .\eng\release\Test-ManagedPayloadContract.ps1 -PayloadRoot .\artifacts\publish\win-x64
+          .\eng\release\New-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\publish\win-x64 -ManifestPath .\artifacts\payload-manifest.json
+          .\eng\release\Test-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\publish\win-x64 -ManifestPath .\artifacts\payload-manifest.json
+
+      - name: Test payload validation scripts
+        shell: pwsh
+        run: .\eng\release\tests\Test-ApplicationPayloadManifest.Tests.ps1
 
       - name: Upload test results
         if: always()
@@ -78,5 +78,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: HVP-win-x64-ci
-          path: artifacts/publish/win-x64
+          path: |
+            artifacts/publish/win-x64
+            artifacts/payload-manifest.json
+          include-hidden-files: true
           if-no-files-found: error

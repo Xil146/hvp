@@ -13,7 +13,7 @@ The project is currently in the design and repository-foundation stage. There is
 
 ## Planned user experience
 
-The primary Windows x64 release will be one self-contained executable: download it, run it, and open a local video. No account, server, media library, installer, or preinstalled .NET runtime is planned for V1.
+The primary Windows x64 release will be one offline installer. It installs one HVP application with the .NET runtime, media engine, codecs, and supporting DLLs included; users will not source dependencies or need a network connection to install or run it.
 
 ## Technology direction
 
@@ -22,7 +22,7 @@ The primary Windows x64 release will be one self-contained executable: download 
 - libmpv, FFmpeg, `gpu-next`, and libplacebo
 - D3D11 hardware decode/render path with safe fallback
 
-See the implementation plan for the licensing and native-binary constraints behind the single-file release.
+See the implementation plan for the licensing, native-binary, and installed-payload constraints behind the offline release.
 
 ## License
 
