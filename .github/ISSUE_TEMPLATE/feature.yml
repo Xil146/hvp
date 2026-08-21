@@ -1,0 +1,64 @@
+name: Feature or improvement
+description: Propose one user-visible or engineering outcome.
+title: "[Feature]: "
+labels:
+  - feature
+body:
+  - type: markdown
+    attributes:
+      value: Read `brief.md`, `implementation_plan.md`, and the relevant design before proposing scope.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What problem should be solved and for whom?
+      placeholder: When..., the user can..., so that...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and evidence
+      description: Current behavior, references, screenshots, logs, or related issues. Remove personal paths.
+    validations:
+      required: true
+  - type: dropdown
+    id: design
+    attributes:
+      label: Design needed?
+      description: Choose Yes/Unsure for behavior, architecture, interop, dependency, schema, security, packaging, HDR, audio, or subtitle policy changes.
+      options:
+        - Unsure - run Design Check
+        - Yes
+        - No - existing design covers it
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions that make this done.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      description: What belongs in this issue, and what explicitly does not?
+    validations:
+      required: true
+  - type: checkboxes
+    id: validation
+    attributes:
+      label: Likely validation
+      options:
+        - label: Unit/contract tests
+        - label: Real-libmpv integration tests
+        - label: Windows UI/accessibility test
+        - label: GPU/HDR/display hardware test
+        - label: Audio receiver/passthrough test
+        - label: Clean-machine/single-file test
+        - label: Dependency/license review

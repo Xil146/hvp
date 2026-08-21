@@ -1,0 +1,39 @@
+# Build output
+bin/
+obj/
+artifacts/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# IDE and user state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Packages and generated native files
+packages/
+eng/native/out/
+eng/native/cache/
+*.nupkg
+*.snupkg
+
+# Release/debug artifacts
+publish/
+release/
+*.pdb
+*.dmp
+*.log
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local Codex logs; project configuration is committed
+.codex-log/
