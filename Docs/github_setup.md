@@ -6,10 +6,12 @@ Status checked: 2026-08-21
 
 - Remote: `https://github.com/Xil146/hvp.git`
 - Remote default branch: `main`
-- Remote content before this documentation work: one MIT `LICENSE` commit.
-- This local folder is initialized with `origin` attached.
-- Branch `docs/project-foundation` is pushed.
-- Draft pull request [#1](https://github.com/Xil146/hvp/pull/1) is open against `main`.
+- Foundation pull request [#1](https://github.com/Xil146/hvp/pull/1) was reviewed and squash-merged as `8539b30`.
+- The public [`HVP Development`](https://github.com/users/Xil146/projects/1) project is linked to the repository with the documented Board view, fields, Status flow, and default automations.
+- The active [`Protect main`](https://github.com/Xil146/hvp/rules/21169431) ruleset requires pull requests and resolved conversations and blocks force pushes and deletion. Required CI checks remain deferred until Phase 0 creates the solution.
+- The documented repository labels exist. A `dependencies` label is also present because `.github/dependabot.yml` applies it.
+- Issues, Discussions, Projects, secret scanning/push protection, and private vulnerability reporting are enabled. The unused wiki and downloads surfaces are disabled.
+- This local folder is initialized with `origin` attached and `main` tracks `origin/main`.
 
 No token should ever be pasted into a repository file or chat.
 
@@ -31,7 +33,7 @@ gh auth status
 
 The `-w` option opens GitHub's browser/device flow. Sign in as `Xil146` and authorize GitHub CLI. If you prefer SSH, configure an SSH key separately and then change `origin`; HTTPS is simplest here.
 
-## 2. Verify and update the prepared branch
+## 2. Verify and update a prepared branch
 
 From this repository:
 
@@ -42,19 +44,18 @@ git log --oneline --decorate -5
 git push
 ```
 
-Review draft PR #1 before marking it ready. Merge through GitHub after checks/review; do not force-push `main`.
+Pull request #1 followed this process and is merged. Use the same review and merge path for future branches; do not force-push `main`.
 
-## 3. Create the Kanban project
+## 3. Kanban project configuration
 
-In GitHub:
+The current project is [`HVP Development`](https://github.com/users/Xil146/projects/1). Its configuration is:
 
-1. Open the `Xil146/hvp` repository, choose **Projects**, then **New project**.
-2. Select **Board** and name it `HVP Development`.
-3. Create/reorder `Status` options: `Todo`, `Design Check`, `Design`, `Ready`, `In Progress`, `Review`, `Test`, `Done`.
-4. Add fields: `Priority` (`P0`-`P3`), `Area`, `Target release`, and `Hardware test required`.
-5. Add a workflow that places newly added issues in `Todo`.
-6. Add auto-close/archive behavior for items moved to `Done` where appropriate.
-7. Add the repository to the project and make the project visible from the repository.
+1. Use a **Board** view named `Board`.
+2. Create/reorder `Status` options: `Todo`, `Design Check`, `Design`, `Ready`, `In Progress`, `Review`, `Test`, `Done`.
+3. Add fields: `Priority` (`P0`-`P3`), `Area`, `Target release`, and `Hardware test required`.
+4. Add a workflow that places newly added issues in `Todo`.
+5. Add auto-close/archive behavior for items moved to `Done` where appropriate.
+6. Add the repository to the project and make the project visible from the repository.
 
 Suggested repository labels:
 
@@ -62,6 +63,7 @@ Suggested repository labels:
 - Area: `ui`, `playback`, `hdr-color`, `audio`, `subtitles`, `persistence`, `packaging`, `testing`.
 - Risk: `native-interop`, `security`, `licensing`, `hardware-test`.
 - Triage: `needs-design`, `blocked`, `good first issue`.
+- Automation: `dependencies` (required by `.github/dependabot.yml`).
 
 Do not duplicate board status as labels.
 
@@ -78,12 +80,14 @@ Under **Settings -> Rules -> Rulesets**, add a branch ruleset for `main`:
 
 Keep administrators subject to the rules once the initial repository setup is stable.
 
+The active ruleset currently requires zero approvals because the repository has one maintainer. Increase this to one approval when a second maintainer is available.
+
 ## 5. Repository settings
 
-- Confirm visibility is Public.
-- Enable Issues, Discussions if desired, and private vulnerability reporting.
-- Add description/topics such as `windows`, `video-player`, `hdr`, `wpf`, `libmpv`, and `dotnet`.
-- Disable unused features rather than leaving empty surfaces.
+- Keep visibility Public.
+- Keep Issues, Discussions, Projects, and private vulnerability reporting enabled.
+- Keep the description and topics (`windows`, `video-player`, `hdr`, `wpf`, `libmpv`, and `dotnet`) current.
+- Keep unused features disabled rather than leaving empty surfaces.
 - Do not add Actions secrets until a workflow needs them. Signing secrets require a protected environment and explicit maintainer approval.
 
 ## Troubleshooting
