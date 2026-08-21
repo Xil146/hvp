@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>HVP-win-x64</AssemblyName>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Hvp.Core/Hvp.Core.csproj" />
+    <ProjectReference Include="../Hvp.Playback/Hvp.Playback.csproj" />
+    <ProjectReference Include="../Hvp.Platform.Windows/Hvp.Platform.Windows.csproj" />
+    <ProjectReference Include="../Hvp.Persistence/Hvp.Persistence.csproj" />
+  </ItemGroup>
+</Project>

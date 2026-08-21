@@ -3,17 +3,11 @@ name: CI
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "eng/**"
-      - "Hvp.slnx"
-      - "global.json"
-      - "Directory.*"
   push:
     branches:
       - main
     paths:
+      - ".github/workflows/**"
       - "src/**"
       - "tests/**"
       - "eng/**"
@@ -48,10 +42,29 @@ jobs:
         run: dotnet build .\Hvp.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test .\Hvp.slnx -c Release --no-build --logger "trx;LogFileName=tests.trx" --results-directory .\artifacts\test-results
+        shell: pwsh
+        run: |
+          Get-ChildItem .\tests -Recurse -Filter *.csproj | ForEach-Object {
+            $resultName = "$($_.BaseName).trx"
+            dotnet test $_.FullName -c Release --no-build --logger "trx;LogFileName=$resultName" --results-directory .\artifacts\test-results
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
 
       - name: Publish single-file x64 app
         run: dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\publish\win-x64
+
+      - name: Verify single-file publish structure
+        shell: pwsh
+        run: |
+          $entries = @(Get-ChildItem .\artifacts\publish\win-x64 -Recurse -Force)
+          $files = @($entries | Where-Object { -not $_.PSIsContainer })
+          $executables = @($files | Where-Object Extension -EQ ".exe")
+          if ($entries.Count -ne 1 -or $files.Count -ne 1 -or $executables.Count -ne 1 -or $executables[0].Name -cne "HVP-win-x64.exe") {
+            $names = $entries.FullName -join ", "
+            throw "Expected only HVP-win-x64.exe and no loose companion files; found: $names"
+          }
 
       - name: Upload test results
         if: always()

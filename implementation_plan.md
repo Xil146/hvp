@@ -12,7 +12,7 @@ HVP will be a lightweight, Windows-only local video player whose primary path is
 
 > Open a large movie file, detect its media and display characteristics, select safe defaults, and play it correctly with minimal interaction.
 
-V1 targets Windows 10 22H2 and Windows 11 on x64 hardware. The primary release artifact will be one self-contained `HVP-win-x64.exe`. It will not require a .NET installation, an installer, an account, or a network connection. Because .NET single-file applications must extract native libraries, the executable will unpack libmpv and native runtime files into the user's temporary directory on first launch.
+V1 targets Windows 11 on x64 hardware. Windows 10 is supported only on editions/configurations that remain supported by Microsoft and .NET 10; ordinary Windows 10 22H2 use is best-effort. The `net10.0-windows10.0.19041.0` target expresses the Windows API floor rather than a lifecycle support guarantee. The primary release artifact will be one self-contained `HVP-win-x64.exe`. It will not require a .NET installation, an installer, an account, or a network connection. Because .NET single-file applications must extract native libraries, the executable will unpack libmpv and native runtime files into the user's temporary directory on first launch.
 
 ## 2. Scope
 
@@ -52,7 +52,7 @@ V1 targets Windows 10 22H2 and Windows 11 on x64 hardware. The primary release a
 | Distribution | Self-contained, single-file, untrimmed `win-x64` publish | One executable for users; trimming is avoided until WPF and reflection behavior are proven safe. |
 | License | MIT for HVP; separately documented third-party licenses | The app remains permissively licensed while respecting LGPL and other dependency obligations. |
 
-These are accepted defaults for planning. Any reversal should be recorded as an architecture decision record in `Docs/adr/`.
+The managed application decisions are accepted by [`ADR 0001`](Docs/adr/0001-managed-application-foundation.md). The native bundle remains pending a separate decision and work item. Any reversal should be recorded as a superseding architecture decision record in `Docs/adr/`.
 
 ## 4. Proposed repository structure
 
@@ -125,7 +125,8 @@ UI code never calls P/Invoke directly. Native callbacks never mutate WPF-bound s
 Deliverables:
 
 - Create `Hvp.slnx`, projects, shared build properties, pinned packages, nullable reference types, analyzers, and deterministic builds.
-- Target `net10.0-windows10.0.19041.0`, x64 only.
+- Target platform-neutral libraries to `net10.0`, Windows-facing projects to
+  `net10.0-windows10.0.19041.0`, and the application publish to x64 only.
 - Establish reproducible acquisition/build of a pinned LGPL-only libmpv plus dependency manifest, checksums, license texts, source offer, and SBOM inputs.
 - Add an external `HVP_LIBMPV_PATH` override so an LGPL-compatible replacement library can be tested without rebuilding HVP.
 - Make CI restore, build, unit-test, and publish on a clean Windows runner.
@@ -222,7 +223,7 @@ The release workflow must assert that the user-facing output directory contains 
 - Contract tests run the playback adapter against a fake native API so edge cases are deterministic.
 - Integration tests use tiny generated SDR/HDR/audio/subtitle fixtures and a real pinned libmpv build.
 - CI verifies build, tests, formatting/analyzers, dependency lock state, license inventory, publish output, and artifact hashes.
-- Hardware/manual tests cover Windows 10/11, Intel/AMD/NVIDIA, SDR/HDR displays, multi-monitor movement, passthrough receivers, and representative large files.
+- Hardware/manual tests cover current Windows 11 and any Windows 10 configuration explicitly claimed as supported, plus Intel/AMD/NVIDIA, SDR/HDR displays, multi-monitor movement, passthrough receivers, and representative large files.
 - Performance baselines record startup time, seek latency, dropped frames, CPU, GPU decode/video utilization, and working set.
 
 GPU/HDR correctness cannot be proven by GitHub-hosted CI alone. A release candidate is not done until the manual hardware matrix is attached to the release issue.
@@ -241,7 +242,7 @@ GPU/HDR correctness cannot be proven by GitHub-hosted CI alone. A release candid
 Recommended defaults are shown in parentheses:
 
 1. Public product name and executable name (`HVP`).
-2. Minimum OS (`Windows 10 22H2`; Windows 11 recommended for HDR).
+2. Minimum OS (resolved by ADR 0001: Windows 11 supported baseline; Windows 10 only where Microsoft and .NET 10 support remain, otherwise best-effort).
 3. V1 architecture (`x64 only`).
 4. Passthrough default (`off`, with an explicit compatible-device setting).
 5. Resume thresholds (`resume after 60 seconds`; mark complete at 95%).

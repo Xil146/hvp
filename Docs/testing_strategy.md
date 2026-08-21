@@ -43,7 +43,7 @@ At minimum before V1:
 
 | Dimension | Coverage |
 | --- | --- |
-| OS | Windows 10 22H2; current Windows 11 |
+| OS | Current Windows 11; any Windows 10 edition/configuration explicitly claimed as supported under ADR 0001 |
 | GPU | One supported Intel, AMD, and NVIDIA configuration |
 | Display | SDR; HDR-capable with HDR off/on; mixed SDR/HDR multi-monitor |
 | Source | SDR AVC 8-bit; SDR/10-bit edge; HDR10 HEVC; HLG; HDR10+; detectable Dolby Vision/base-layer fallback |

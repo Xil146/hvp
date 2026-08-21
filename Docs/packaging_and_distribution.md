@@ -1,6 +1,6 @@
 # Packaging and distribution design
 
-Status: Proposed
+Status: Accepted for the managed artifact by [`ADR 0001`](adr/0001-managed-application-foundation.md); native bundle pending separate approval
 
 ## User-facing artifact
 
@@ -12,7 +12,12 @@ An optional `HVP-win-x64-portable.zip` may place the executable and native DLLs 
 
 ## Publish configuration
 
-- `TargetFramework`: `net10.0-windows10.0.19041.0`.
+- `TargetFramework`: `net10.0-windows10.0.19041.0`. This is the Windows API
+  availability floor, not an operating-system lifecycle promise.
+- Supported desktop baseline: Windows 11. Windows 10 is supported only where
+  the Windows edition/configuration and .NET 10 remain supported by Microsoft;
+  other Windows 10 22H2 use is best-effort and must not be advertised as fully
+  supported.
 - `RuntimeIdentifier`: `win-x64`.
 - Self-contained and single-file enabled.
 - `IncludeNativeLibrariesForSelfExtract=true`.
@@ -24,11 +29,17 @@ An optional `HVP-win-x64-portable.zip` may place the executable and native DLLs 
 
 The MIT license applies to HVP first-party source, not bundled dependencies. Do not take an arbitrary community mpv Windows build and ship it.
 
-The approved native bundle must:
+The native policy is accepted by [`ADR 0002`](adr/0002-native-libmpv-foundation.md),
+but no binary is approved until its separate evidence gate passes. The approved
+native bundle must:
 
-- build mpv in its documented LGPL mode and exclude GPL-only mpv source;
+- build mpv in its documented LGPL mode and exclude GPL-only mpv source; the
+  `-Dgpl=false` switch is necessary but not proof without auditing the compiled
+  source set and linked dependency graph;
 - use an FFmpeg/dependency configuration whose licenses are compatible with the selected distribution model;
-- preserve dynamic libmpv loading and provide `HVP_LIBMPV_PATH` as a documented compatible-library override;
+- preserve dynamic libmpv loading and provide `HVP_LIBMPV_PATH` as a documented
+  compatible-library override; require an absolute path and restricted DLL
+  search, and fail without silent fallback when a configured override is invalid;
 - record source commit/tag, patches, full configure/build flags, toolchain/container version, dependency versions, licenses, and SHA-256 checksums;
 - make the corresponding source/build scripts available for the released binary;
 - include required copyright/license notices and an SBOM;

@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Hvp.App/Hvp.App.csproj" />
+    <Project Path="src/Hvp.Core/Hvp.Core.csproj" />
+    <Project Path="src/Hvp.Playback/Hvp.Playback.csproj" />
+    <Project Path="src/Hvp.Platform.Windows/Hvp.Platform.Windows.csproj" />
+    <Project Path="src/Hvp.Persistence/Hvp.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Hvp.Core.Tests/Hvp.Core.Tests.csproj" />
+    <Project Path="tests/Hvp.Playback.Tests/Hvp.Playback.Tests.csproj" />
+    <Project Path="tests/Hvp.Persistence.Tests/Hvp.Persistence.Tests.csproj" />
+    <Project Path="tests/Hvp.IntegrationTests/Hvp.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

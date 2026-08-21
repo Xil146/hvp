@@ -1,6 +1,6 @@
 # Architecture design
 
-Status: Proposed
+Status: Accepted by [`ADR 0001`](adr/0001-managed-application-foundation.md)
 
 ## Context
 

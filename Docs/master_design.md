@@ -33,13 +33,13 @@ Design statuses are:
 
 | Design | Scope | Status | Implementation owner |
 | --- | --- | --- | --- |
-| [`architecture.md`](architecture.md) | System boundaries, dependency direction, runtime flow, failure model | Proposed | Cross-cutting |
+| [`architecture.md`](architecture.md) | System boundaries, dependency direction, runtime flow, failure model | Accepted by [ADR 0001](adr/0001-managed-application-foundation.md) | Cross-cutting |
 | [`ui_and_input.md`](ui_and_input.md) | Window, controls, keyboard, fullscreen, accessibility | Proposed | `Hvp.App` |
 | [`playback_engine.md`](playback_engine.md) | libmpv lifecycle, interop, eventing, commands, diagnostics | Proposed | `Hvp.Playback` |
 | [`hdr_color_pipeline.md`](hdr_color_pipeline.md) | HDR classification, output decisions, tone mapping, validation | Proposed | Playback + Windows platform |
 | [`media_tracks.md`](media_tracks.md) | Audio/subtitle discovery, matching, selection, passthrough | Proposed | Core + Playback |
 | [`persistence.md`](persistence.md) | Settings, playback history, privacy, migration, recovery | Proposed | `Hvp.Persistence` |
-| [`packaging_and_distribution.md`](packaging_and_distribution.md) | Single EXE, native bundle, licensing, release artifacts | Proposed | Build/release |
+| [`packaging_and_distribution.md`](packaging_and_distribution.md) | Single EXE, native bundle, licensing, release artifacts | Managed artifact accepted by [ADR 0001](adr/0001-managed-application-foundation.md); native bundle pending | Build/release |
 | [`testing_strategy.md`](testing_strategy.md) | Automated, integration, hardware, performance, release evidence | Proposed | Cross-cutting |
 | [`development_workflow.md`](development_workflow.md) | Kanban stages, design check, agents, review and done | Active process | Contributors |
 | [`github_setup.md`](github_setup.md) | Authentication, remote sync, board and protection setup | Active runbook | Maintainer |
@@ -54,6 +54,12 @@ Design statuses are:
 - Testing owns generated fixtures and the release hardware matrix shared by all components.
 
 ## Decision records
+
+- [`ADR 0001`](adr/0001-managed-application-foundation.md) accepts the managed
+  .NET/WPF/project-boundary/packaging foundation.
+- [`ADR 0002`](adr/0002-native-libmpv-foundation.md) accepts the native build,
+  licensing, ABI, replacement, provenance, and evidence policy; the actual bundle
+  remains pending issue #6.
 
 Use [`adr/0000-template.md`](adr/0000-template.md) when a choice:
 

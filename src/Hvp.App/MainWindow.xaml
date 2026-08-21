@@ -1,0 +1,12 @@
+<Window x:Class="Hvp.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="HVP"
+        Width="960"
+        Height="540">
+  <Grid>
+    <TextBlock HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Text="HVP Phase 0 scaffold" />
+  </Grid>
+</Window>
