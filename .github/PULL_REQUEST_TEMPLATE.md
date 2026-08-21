@@ -26,7 +26,7 @@ Commands/checks actually run:
 - [ ] Tests added/updated for behavior changes.
 - [ ] Full relevant automated gate passes.
 - [ ] Manual/hardware evidence attached when required.
-- [ ] Clean-machine/single-file evidence attached when packaging changed.
+- [ ] Clean-machine/installed-payload evidence attached when packaging changed.
 
 ## Risk and release notes
 

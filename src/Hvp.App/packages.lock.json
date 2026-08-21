@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0-windows10.0.19041": {
+      "hvp.core": {
+        "type": "Project"
+      },
+      "hvp.persistence": {
+        "type": "Project",
+        "dependencies": {
+          "Hvp.Core": "[1.0.0, )"
+        }
+      },
+      "hvp.platform.windows": {
+        "type": "Project",
+        "dependencies": {
+          "Hvp.Core": "[1.0.0, )"
+        }
+      },
+      "hvp.playback": {
+        "type": "Project",
+        "dependencies": {
+          "Hvp.Core": "[1.0.0, )"
+        }
+      }
+    },
+    "net10.0-windows10.0.19041/win-x64": {}
+  }
+}

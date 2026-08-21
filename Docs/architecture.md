@@ -1,6 +1,6 @@
 # Architecture design
 
-Status: Proposed
+Status: Accepted by [`ADR 0001`](adr/0001-managed-application-foundation.md)
 
 ## Context
 
@@ -95,4 +95,4 @@ A failed open returns to a usable idle/error shell. A failed hardware decode ret
 - Pin the .NET SDK and NuGet graph; use lock files and central package management.
 - Prefer platform/BCL code for small utilities over adding a dependency.
 - Native binaries are never committed without provenance, checksum, ABI, license, build flags, and update ownership.
-- All dependencies must support offline runtime operation and self-contained publish.
+- All dependencies must support offline runtime operation and the self-contained multi-file installed payload defined by ADR 0003.

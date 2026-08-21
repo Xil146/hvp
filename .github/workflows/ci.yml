@@ -3,17 +3,11 @@ name: CI
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "eng/**"
-      - "Hvp.slnx"
-      - "global.json"
-      - "Directory.*"
   push:
     branches:
       - main
     paths:
+      - ".github/workflows/**"
       - "src/**"
       - "tests/**"
       - "eng/**"
@@ -48,10 +42,29 @@ jobs:
         run: dotnet build .\Hvp.slnx -c Release --no-restore
 
       - name: Test
-        run: dotnet test .\Hvp.slnx -c Release --no-build --logger "trx;LogFileName=tests.trx" --results-directory .\artifacts\test-results
+        shell: pwsh
+        run: |
+          Get-ChildItem .\tests -Recurse -Filter *.csproj | ForEach-Object {
+            $resultName = "$($_.BaseName).trx"
+            dotnet test $_.FullName -c Release --no-build --logger "trx;LogFileName=$resultName" --results-directory .\artifacts\test-results
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
 
-      - name: Publish single-file x64 app
+      - name: Publish self-contained x64 application payload
         run: dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\publish\win-x64
+
+      - name: Generate and validate application-payload manifest
+        shell: pwsh
+        run: |
+          .\eng\release\Test-ManagedPayloadContract.ps1 -PayloadRoot .\artifacts\publish\win-x64
+          .\eng\release\New-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\publish\win-x64 -ManifestPath .\artifacts\payload-manifest.json
+          .\eng\release\Test-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\publish\win-x64 -ManifestPath .\artifacts\payload-manifest.json
+
+      - name: Test payload validation scripts
+        shell: pwsh
+        run: .\eng\release\tests\Test-ApplicationPayloadManifest.Tests.ps1
 
       - name: Upload test results
         if: always()
@@ -65,5 +78,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: HVP-win-x64-ci
-          path: artifacts/publish/win-x64
+          path: |
+            artifacts/publish/win-x64
+            artifacts/payload-manifest.json
+          include-hidden-files: true
           if-no-files-found: error

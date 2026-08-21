@@ -59,7 +59,7 @@ For a focused change, run focused tests first. Before a PR is ready, run the ful
 - Do not silently force HDR or change Windows display settings. Detect, adapt, report, and expose diagnostics.
 - Treat media and subtitle files as untrusted. Do not scan beyond the opened file's directory.
 - Persistence is local, versioned, atomic, and path-private in logs.
-- Pin production dependencies centrally. Adding or changing one requires license, security, native-ABI, single-file, and update-policy review.
+- Pin production dependencies centrally. Adding or changing one requires license, security, native-ABI, installed-payload, and update-policy review.
 - HVP code is MIT. Ship only an approved native bundle and keep `THIRD_PARTY_NOTICES.md`, source references, checksums, and SBOM data current.
 
 ## Subagent policy

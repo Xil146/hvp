@@ -34,7 +34,7 @@ Keep view-model behavior unit-testable. Add targeted Windows UI automation for o
 - Unit and non-GPU integration tests with test result artifacts.
 - Formatting and repository policy checks.
 - Dependency/license inventory, native checksum verification, and secret scan.
-- Single-file publish plus structural assertion of the expected output.
+- Self-contained multi-file publish plus manifest validation of every staged path and digest.
 - No flaky retry counted as success without a tracking issue.
 
 ## Hardware matrix
@@ -43,7 +43,7 @@ At minimum before V1:
 
 | Dimension | Coverage |
 | --- | --- |
-| OS | Windows 10 22H2; current Windows 11 |
+| OS | Current Windows 11; any Windows 10 edition/configuration explicitly claimed as supported under ADR 0001 |
 | GPU | One supported Intel, AMD, and NVIDIA configuration |
 | Display | SDR; HDR-capable with HDR off/on; mixed SDR/HDR multi-monitor |
 | Source | SDR AVC 8-bit; SDR/10-bit edge; HDR10 HEVC; HLG; HDR10+; detectable Dolby Vision/base-layer fallback |
