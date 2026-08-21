@@ -7,14 +7,21 @@ Status checked: 2026-08-21
 - Remote: `https://github.com/Xil146/hvp.git`
 - Remote default branch: `main`
 - Remote content before this documentation work: one MIT `LICENSE` commit.
-- This local folder has been initialized and `origin` added/fetched.
-- GitHub CLI account `Xil146` is selected but its saved token is invalid.
+- This local folder is initialized with `origin` attached.
+- Branch `docs/project-foundation` is pushed.
+- Draft pull request [#1](https://github.com/Xil146/hvp/pull/1) is open against `main`.
 
 No token should ever be pasted into a repository file or chat.
 
-## 1. Re-authenticate GitHub CLI
+## 1. Verify GitHub CLI authentication
 
-Open PowerShell and run:
+No authentication action is currently needed for the initial sync. Before future GitHub changes, verify:
+
+```powershell
+gh auth status
+```
+
+If it reports an invalid token, repair it with:
 
 ```powershell
 gh auth logout -h github.com -u Xil146
@@ -24,7 +31,7 @@ gh auth status
 
 The `-w` option opens GitHub's browser/device flow. Sign in as `Xil146` and authorize GitHub CLI. If you prefer SSH, configure an SSH key separately and then change `origin`; HTTPS is simplest here.
 
-## 2. Verify and publish the prepared branch
+## 2. Verify and update the prepared branch
 
 From this repository:
 
@@ -32,16 +39,10 @@ From this repository:
 git remote -v
 git status --short --branch
 git log --oneline --decorate -5
-git push -u origin docs/project-foundation
+git push
 ```
 
-Then create a draft pull request:
-
-```powershell
-gh pr create --draft --base main --head docs/project-foundation --title "docs: establish HVP architecture and workflow" --fill
-```
-
-Review the file list before marking it ready. Merge through GitHub after checks/review; do not force-push `main`.
+Review draft PR #1 before marking it ready. Merge through GitHub after checks/review; do not force-push `main`.
 
 ## 3. Create the Kanban project
 
