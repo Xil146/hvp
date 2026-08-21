@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a reproducible HVP failure or regression.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: HVP version or commit
+      placeholder: v0.1.0 or commit hash
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Windows and hardware environment
+      description: Windows version, GPU/driver, displays and HDR state, audio device/receiver, and connection type when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: Media facts
+      description: Container/codecs, resolution, bit depth, HDR type, audio/subtitle formats. Do not upload copyrighted media or personal paths.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Attach HVP's export when available. Review it for personal paths first.
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Regression?
+      options:
+        - Unknown
+        - Yes - worked in an earlier HVP version
+        - No - never worked
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched for an existing issue.
+          required: true
+        - label: I can legally share every attached fixture/log and removed personal information.
+          required: true

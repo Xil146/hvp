@@ -1,0 +1,40 @@
+name: Engineering or documentation task
+description: Track bounded maintenance, research, testing, or documentation work.
+title: "[Task]: "
+labels:
+  - chore
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: State one measurable result.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Name the files/components in scope and important non-goals.
+    validations:
+      required: true
+  - type: dropdown
+    id: design
+    attributes:
+      label: Design Check result
+      options:
+        - Not run yet
+        - Design required
+        - Existing design is sufficient
+        - No design impact
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria and evidence
+      placeholder: |
+        - [ ] Result...
+        - [ ] Verification...
+    validations:
+      required: true
