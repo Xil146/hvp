@@ -16,5 +16,11 @@
     <ProjectReference Include="../Hvp.Playback/Hvp.Playback.csproj" />
     <ProjectReference Include="../Hvp.Platform.Windows/Hvp.Platform.Windows.csproj" />
     <ProjectReference Include="../Hvp.Persistence/Hvp.Persistence.csproj" />
+    <Content Include="../../THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToPublishDirectory="Always" />
+    <Content Include="../../licenses/LGPL-2.1.txt" Link="licenses/LGPL-2.1.txt" CopyToPublishDirectory="Always" />
+    <Content Include="../../licenses/LGPL-3.0.txt" Link="licenses/LGPL-3.0.txt" CopyToPublishDirectory="Always" />
   </ItemGroup>
+  <Target Name="StagePinnedLibmpvBundle" AfterTargets="Publish">
+    <Exec Command="&quot;$(SystemRoot)\System32\WindowsPowerShell\v1.0\powershell.exe&quot; -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\eng\release\Stage-LibmpvBundle.ps1&quot; -PublishDirectory &quot;$([System.String]::Copy('$(PublishDir)').TrimEnd('\'))&quot; -ManifestPath &quot;$(MSBuildProjectDirectory)\..\..\eng\native\libmpv-bundle.json&quot; -PayloadDirectory &quot;$(MSBuildProjectDirectory)\..\..\artifacts\libmpv\payload&quot;" />
+  </Target>
 </Project>

@@ -39,7 +39,7 @@ Design statuses are:
 | [`hdr_color_pipeline.md`](hdr_color_pipeline.md) | HDR classification, output decisions, tone mapping, validation | Proposed | Playback + Windows platform |
 | [`media_tracks.md`](media_tracks.md) | Audio/subtitle discovery, matching, selection, passthrough | Proposed | Core + Playback |
 | [`persistence.md`](persistence.md) | Settings, playback history, privacy, migration, recovery | Proposed | `Hvp.Persistence` |
-| [`packaging_and_distribution.md`](packaging_and_distribution.md) | Offline installer, staged DLL bundle, licensing, release artifacts | Packaging accepted by [ADR 0003](adr/0003-offline-installer-and-installed-payload.md); native bundle pending evidence gate | Build/release |
+| [`packaging_and_distribution.md`](packaging_and_distribution.md) | Staged DLL bundle, licensing, and lean V1 folder | Lean V1 accepted by ADRs 0004/0005 | Build/release |
 | [`testing_strategy.md`](testing_strategy.md) | Automated, integration, hardware, performance, release evidence | Proposed | Cross-cutting |
 | [`development_workflow.md`](development_workflow.md) | Kanban stages, design check, agents, review and done | Active process | Contributors |
 | [`github_setup.md`](github_setup.md) | Authentication, remote sync, board and protection setup | Active runbook | Maintainer |
@@ -57,12 +57,13 @@ Design statuses are:
 
 - [`ADR 0001`](adr/0001-managed-application-foundation.md) accepts the managed
   .NET/WPF/project-boundary/packaging foundation.
-- [`ADR 0002`](adr/0002-native-libmpv-foundation.md) accepts the native build,
-  licensing, ABI, replacement, provenance, and evidence policy; the actual bundle
-  remains pending issue #6.
+- [`ADR 0004`](adr/0004-lean-v1-libmpv-bundle.md) supersedes ADR 0002 with a
+  pinned, redistributable Windows x64 libmpv bundle and focused load/playback
+  evidence for issue #6.
+- [`ADR 0006`](adr/0006-lgpl-libmpv-bundle-selection.md) records the exact
+  LGPL build selected under ADR 0004 and its required notice/payload evidence.
 - [`ADR 0003`](adr/0003-offline-installer-and-installed-payload.md)
-  supersedes only ADR 0001's single-file packaging item with one offline
-  installer over a self-contained multi-file staged payload.
+  is superseded for V1 distribution/validation by [`ADR 0005`](adr/0005-lean-v1-packaged-folder.md), which requires a self-contained Windows x64 folder first.
 
 Use [`adr/0000-template.md`](adr/0000-template.md) when a choice:
 

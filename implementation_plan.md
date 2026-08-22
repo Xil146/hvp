@@ -12,7 +12,7 @@ HVP will be a lightweight, Windows-only local video player whose primary path is
 
 > Open a large movie file, detect its media and display characteristics, select safe defaults, and play it correctly with minimal interaction.
 
-V1 targets Windows 11 on x64 hardware. Windows 10 is supported only on editions/configurations that remain supported by Microsoft and .NET 10; ordinary Windows 10 22H2 use is best-effort. The `net10.0-windows10.0.19041.0` target expresses the Windows API floor rather than a lifecycle support guarantee. The primary release artifact will be one offline Windows x64 installer. It installs one HVP application as a self-contained, multi-file directory containing the .NET runtime, libmpv, FFmpeg, codecs, and every supporting DLL. It requires no separately installed runtime, codec pack, account, or network connection.
+V1 targets Windows 11 on x64 hardware. Windows 10 is supported only on editions/configurations that remain supported by Microsoft and .NET 10; ordinary Windows 10 22H2 use is best-effort. The `net10.0-windows10.0.19041.0` target expresses the Windows API floor rather than a lifecycle support guarantee. The first release artifact is one offline self-contained Windows x64 folder containing the .NET runtime, HVP, libmpv, codecs, supporting DLLs, notices, and licenses. It requires no separately installed runtime, codec pack, account, or network connection. An installer is deferred until playback is proven.
 
 ## 2. Scope
 
@@ -49,7 +49,7 @@ V1 targets Windows 11 on x64 hardware. Windows 10 is supported only on editions/
 | Interop | Small internal P/Invoke layer | Keeps native ownership, versioning, error handling, and licensing visible; avoids an additional wrapper dependency. |
 | App pattern | MVVM at the shell, service interfaces at boundaries | Keeps WPF state testable without building a framework-heavy application. |
 | Persistence | Versioned JSON in `%LOCALAPPDATA%\HVP` | Local, inspectable, migration-friendly, and network-free. |
-| Distribution | One offline installer over a self-contained, multi-file, untrimmed `win-x64` payload | One simple user acquisition path with a visible, auditable DLL closure and no user-sourced dependencies. |
+| Distribution | One offline self-contained, multi-file, untrimmed `win-x64` folder | Gets a real portable payload and clean-machine proof before installer work. |
 | License | MIT for HVP; separately documented third-party licenses | The app remains permissively licensed while respecting LGPL and other dependency obligations. |
 
 The managed application decisions are accepted by [`ADR 0001`](Docs/adr/0001-managed-application-foundation.md). Its packaging item is superseded by [`ADR 0003`](Docs/adr/0003-offline-installer-and-installed-payload.md). The native policy is accepted by [`ADR 0002`](Docs/adr/0002-native-libmpv-foundation.md), while approval of an actual bundle remains a separate evidence-gated work item.
@@ -81,8 +81,8 @@ HVP/
 |   |-- development_workflow.md
 |   `-- github_setup.md
 |-- eng/
-|   |-- native/                    # Reproducible libmpv build/verification
-|   `-- release/                   # Packaging, checksums, SBOM, smoke tests
+|   |-- native/                    # Pinned third-party libmpv bundle metadata
+|   `-- release/                   # Payload manifest and smoke tests
 |-- src/
 |   |-- Hvp.App/                   # WPF shell, views, view models, composition
 |   |-- Hvp.Core/                  # Domain models and platform-neutral policies
@@ -127,15 +127,15 @@ Deliverables:
 - Create `Hvp.slnx`, projects, shared build properties, pinned packages, nullable reference types, analyzers, and deterministic builds.
 - Target platform-neutral libraries to `net10.0`, Windows-facing projects to
   `net10.0-windows10.0.19041.0`, and the application publish to x64 only.
-- Establish reproducible acquisition/build of a pinned LGPL-only libmpv plus dependency manifest, checksums, license texts, source offer, and SBOM inputs.
-- Add an external `HVP_LIBMPV_PATH` override so an LGPL-compatible replacement library can be tested without rebuilding HVP.
+- Select one maintained redistributable Windows x64 libmpv bundle; pin its exact version, archive/DLL SHA-256 values, licenses/notices, and matching publisher source/build-material reference.
+- Copy the exact selected DLL closure into HVP's private application directory. Do not build libmpv or provide `HVP_LIBMPV_PATH` in V1.
 - Make CI restore, build, unit-test, and publish on a clean Windows runner.
 - Stage the complete self-contained application and approved DLL closure as one
   canonical installed-directory tree with a machine-readable file/hash manifest.
 - Optionally produce a portable ZIP from that exact staged tree; installer
   technology is not on the Phase 0 critical path.
 
-Gate: a clean clone builds without undocumented machine-local files; every binary dependency has a version, source, checksum, and license classification; and the complete staged tree launches offline on clean Windows without a system .NET runtime or codec packs.
+Gate: a clean clone builds without undocumented machine-local files; the selected bundle has version, hashes, licenses, and source/build-material reference; and the complete staged folder launches offline on one clean Windows 11 machine without a system .NET runtime or codec packs.
 
 ### Phase 1 - risk-reduction playback spike
 
@@ -145,10 +145,10 @@ Deliverables:
 - Minimal libmpv P/Invoke layer with safe handles, event loop, logging, and shutdown.
 - `loadfile` passed as an argument array rather than a command string.
 - D3D11 `gpu-next` output, `hwdec=auto-safe`, software fallback, and error reporting.
-- Open, play/pause, seek, resize, fullscreen, and clean exit.
-- Manual evidence for at least one large 4K HEVC 10-bit file on one GPU.
+- Open, play/pause, seek, volume, stop, resize, fullscreen, and clean exit.
+- Immediately test one normal user-owned MP4; do not wait for installer work or exhaustive automation.
 
-Gate: no UI deadlocks, no native callback exceptions, no leaked mpv handle, stable repeated open/close, and measurable hardware decoding when available.
+Gate: normal MP4 playback works; no UI deadlocks, native callback exceptions, leaked mpv handle, or file lock after stop/dispose; repeated startup/shutdown is stable.
 
 ### Phase 2 - playback core and minimal shell
 
@@ -188,17 +188,16 @@ Deliverables:
 
 Gate: track selection policy is unit tested, external matching never scans outside the media directory, and malformed/corrupt settings recover without blocking playback.
 
-### Phase 5 - hardening and V1 release
+### Phase 5 - practical V1 package
 
 Deliverables:
 
-- One offline x64 installer wrapping the exact Phase 0 validated staged directory.
-- Optional transparent portable ZIP produced from the identical payload for troubleshooting and dependency replacement.
-- Release checksums, SBOM, third-party notices, source/build references, and changelog.
-- Clean-machine smoke test, Windows Defender scan, startup/seek/CPU/GPU measurements, and multi-GPU HDR test report.
-- Accessibility pass, high-DPI/multi-monitor pass, crash-safe shutdown, and file-association design review.
+- Self-contained Windows x64 folder containing the expected managed and pinned native DLLs.
+- Bundle version/hashes, third-party notices, license texts, matching source/build-material reference, and changelog.
+- Offline clean-Windows-11 launch and playback of two or three normal local files.
+- Focused checks: DLL/API load, loaded event, stop/dispose unlock, missing-DLL error, repeated startup/shutdown, and packaged payload closure.
 
-Gate: every V1 acceptance criterion passes; offline install, launch, upgrade, uninstall, and reinstall succeed on clean Windows; release artifacts are reproducible; and licensing review is complete. Code signing is optional for early releases but required before presenting the binary as broadly trusted; unsigned builds will likely trigger SmartScreen reputation warnings.
+Gate: issue #6's simplified acceptance criteria pass and its bundle version/hashes and clean-machine result are recorded. Installer, SBOM, candidate promotion, reproducible builds, replacement DLLs, HDR/passthrough, exotic codecs, and extensive performance work remain follow-up scope.
 
 ## 7. Build and release target
 
@@ -217,18 +216,17 @@ Expected release command after Phase 0:
 dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true
 ```
 
-The managed scaffold workflow first validates publish output against the reviewed, version-controlled `eng/release/managed-payload-contract.json`, then generates the complete staged application's relative-path/SHA-256 manifest. The contract is revised explicitly when the pinned SDK/runtime or approved native closure changes. Application binaries are signed before the final manifest is generated. The installer and optional portable ZIP are derived from the exact payload, which must launch offline without a system .NET runtime or codec packs; installer-owned bookkeeping is inventoried separately.
+The publish workflow copies the selected native closure into the self-contained folder and validates the expected relative paths and SHA-256 values. The folder must launch offline without a system .NET runtime or codec packs.
 
 ## 8. Quality strategy
 
 - Unit tests cover status classification, subtitle matching, default-track selection, resume policy, persistence migration, and state transitions.
 - Contract tests run the playback adapter against a fake native API so edge cases are deterministic.
-- Integration tests use tiny generated SDR/HDR/audio/subtitle fixtures and a real pinned libmpv build.
-- CI verifies build, tests, formatting/analyzers, dependency lock state, license inventory, the staged payload manifest, and artifact hashes.
-- Hardware/manual tests cover current Windows 11 and any Windows 10 configuration explicitly claimed as supported, plus Intel/AMD/NVIDIA, SDR/HDR displays, multi-monitor movement, passthrough receivers, and representative large files.
-- Performance baselines record startup time, seek latency, dropped frames, CPU, GPU decode/video utilization, and working set.
+- Integration tests use a real pinned libmpv bundle for native load, a file-loaded event, file unlock after stop/dispose, missing-DLL error, and repeated startup/shutdown.
+- CI verifies build, focused tests, notices/licenses, and the staged payload's expected DLLs and hashes.
+- Manual V1 testing uses H.264/AAC MP4, a multi-audio/subtitle MKV, a large seekable file, an unsupported/damaged file, and a filename containing spaces and non-ASCII characters.
 
-GPU/HDR correctness cannot be proven by GitHub-hosted CI alone. A release candidate is not done until the manual hardware matrix is attached to the release issue.
+HDR, passthrough, exotic codecs, and extensive performance validation are deferred; they must not be claimed from these checks.
 
 ## 9. Security and privacy
 
@@ -256,10 +254,7 @@ None blocks the playback spike; they must be closed before the related phase is 
 
 ## 11. V1 definition of done
 
-- A new user runs one offline x64 installer and opens a supported local file without sourcing or installing dependencies separately.
-- A large 4K HEVC 10-bit MKV uses hardware decoding on supported Intel, AMD, and NVIDIA systems with safe fallback.
-- All four SDR/HDR source/output combinations have recorded, visually correct results on the release matrix.
-- Embedded and matching external subtitles plus all embedded audio tracks are selectable.
-- Resume and language defaults work, remain local, and recover from corrupt settings.
-- The app is keyboard-operable, handles errors without hanging, and exits without orphan processes or locked files.
-- CI is green, release evidence is attached, dependency licenses are satisfied, and the source remains MIT licensed.
+- A user launches one offline self-contained Windows x64 folder and plays supported local files without sourcing dependencies.
+- The pinned libmpv bundle loads from HVP's private directory, with recorded version, hashes, license texts/notices, and source/build-material reference.
+- Open, play/pause, seek, volume, stop, and shutdown work for real local files; stop/dispose leaves no lock.
+- The focused automated native/payload checks pass and one clean Windows 11 machine plays two or three files offline.

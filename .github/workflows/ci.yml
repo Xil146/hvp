@@ -52,13 +52,21 @@ jobs:
             }
           }
 
+      - name: Acquire pinned libmpv bundle
+        shell: pwsh
+        run: .\eng\native\Get-LibmpvBundle.ps1
+
       - name: Publish self-contained x64 application payload
         run: dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\publish\win-x64
+
+      - name: Validate staged application payload
+        shell: pwsh
+        run: |
+          .\eng\release\Test-ManagedPayloadContract.ps1 -PayloadRoot .\artifacts\publish\win-x64
 
       - name: Generate and validate application-payload manifest
         shell: pwsh
         run: |
-          .\eng\release\Test-ManagedPayloadContract.ps1 -PayloadRoot .\artifacts\publish\win-x64
           .\eng\release\New-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\publish\win-x64 -ManifestPath .\artifacts\payload-manifest.json
           .\eng\release\Test-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\publish\win-x64 -ManifestPath .\artifacts\payload-manifest.json
 
