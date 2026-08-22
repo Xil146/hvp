@@ -5,9 +5,9 @@ Status: Active process
 ## Board flow
 
 ```text
-Todo -> Design Check -> Design -> Ready -> In Progress -> Review -> Test -> Done
-                         |                    ^             |
-                         `---- not needed ----'             `-> In Progress on failure
+Todo -> Design Check -> Design -> Ready -> In Progress -> Phase Review -> Test -> Done
+                         |                    ^                   |
+                         `---- not needed ----'                   `-> In Progress on failure
 ```
 
 Use one GitHub Project with a single-select `Status` field matching these columns. Keep repository labels for type/risk, not as a second status system.
@@ -46,9 +46,14 @@ Definition of Ready:
 
 Use a focused branch named `feature/<issue>-slug`, `fix/<issue>-slug`, or `docs/<issue>-slug`. One person/agent owns integration. Keep WIP low: one implementation item per contributor plus review work.
 
-### Review
+### Phase Review
 
-The PR is self-reviewed, linked, documented, and has automated evidence. Review follows `AGENTS.md` code review priorities. Significant changes should have independent verification by someone/agent that did not implement them.
+Implement in larger coherent phases. During a phase, run focused tests and make
+small corrections without requesting a separate review for every action. At the
+end of the phase, self-review the complete diff, link the issue/design/evidence,
+and perform a short risk-focused independent review when the change touches
+native lifetime/threading, DLL loading, dependencies, packaging, HDR, or
+security. Review follows `AGENTS.md` priorities.
 
 ### Test
 
@@ -66,7 +71,7 @@ The main agent remains the integrator and keeps requirements/decisions in the pr
 | --- | --- | --- |
 | File/code inventory, focused docs lookup, log/test-output summary | `hvp_scout` on the fast/low-cost model | Main agent checks cited files/facts. |
 | Small mechanical edit with exact pattern and disjoint files | `hvp_scout` or `hvp_worker` | Main agent reviews diff and runs checks. |
-| Bounded production implementation after accepted design | `hvp_worker` on balanced model | Independent `hvp_reviewer` plus tests. |
+| Bounded production implementation after accepted design | `hvp_worker` on balanced model | Focused tests during the phase; short independent review at the phase boundary when risk warrants it. |
 | Architecture, native lifetime/threading, HDR policy, dependency/license decision | Main agent/high-capability model | Maintainer review and targeted evidence. |
 | Final PR risk review | `hvp_reviewer` on high-capability model, read-only | Main agent resolves findings and reruns gates. |
 

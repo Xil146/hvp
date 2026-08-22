@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "publisher": "zhongfly/mpv-winbuild",
+  "release": "2026-08-22-49418246f3",
+  "architecture": "x86_64",
+  "asset": "mpv-dev-lgpl-x86_64-20260822-git-49418246f3.7z",
+  "downloadUrl": "https://github.com/zhongfly/mpv-winbuild/releases/download/2026-08-22-49418246f3/mpv-dev-lgpl-x86_64-20260822-git-49418246f3.7z",
+  "archiveSha256": "4b9295dc281bf63129260237006c36c38aad9031569205bb2bdf6dd0ccfc79aa",
+  "sourceOrBuildReference": "https://github.com/zhongfly/mpv-winbuild/actions/runs/32571847564",
+  "releaseReference": "https://github.com/zhongfly/mpv-winbuild/releases/tag/2026-08-22-49418246f3",
+  "buildRepositoryCommit": "16ca55d5f3e8a847a53f52e2d59bf60976264d43",
+  "licenseBuildModeReference": "https://github.com/zhongfly/mpv-winbuild/blob/16ca55d5f3e8a847a53f52e2d59bf60976264d43/compile-lgpl-libmpv.patch",
+  "files": [
+    {
+      "sourcePath": "libmpv-2.dll",
+      "destinationPath": "libmpv-2.dll",
+      "sha256": "7b3128c51da4f23e021e7ccdc3ae455dcf8d5c287b74702a6356ff19f750e288"
+    }
+  ]
+}

@@ -39,3 +39,6 @@ Desktop.ini
 
 # Local Codex logs; project configuration is committed
 .codex-log/
+
+# Local convenience launcher
+Run-HVP.bat

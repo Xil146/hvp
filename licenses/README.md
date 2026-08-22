@@ -1,7 +1,11 @@
-# Release license-text staging
+# Native bundle license texts (partial)
 
-This directory intentionally contains no asserted third-party license text while
-no native candidate has passed provenance and legal review. A release candidate
-must populate it with the complete, verbatim applicable license and notice texts
-for every shipped native dependency, and record each file hash in its native
-candidate manifest. Do not infer a final license conclusion from this template.
+- `LGPL-2.1.txt` is the verbatim GNU LGPL v2.1 text for the selected
+  publisher-declared libmpv licensing path.
+- `LGPL-3.0.txt` is the verbatim GNU LGPL v3 text for the selected
+  publisher-declared statically linked FFmpeg configuration.
+
+The selected release, hashes, build-mode evidence, and publisher disclaimer are
+recorded in `THIRD_PARTY_NOTICES.md` and `eng/native/libmpv-bundle.json`.
+They do not replace the pending exact static-link closure inventory, its
+component notices/licenses, and corresponding-source or relinking material.

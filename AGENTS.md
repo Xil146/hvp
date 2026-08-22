@@ -26,8 +26,8 @@ The planned tree may precede the code. Do not invent build commands when the sol
 3. For a design-relevant change, update the component document or add an ADR before implementation.
 4. Make the smallest coherent change. Preserve unrelated user work.
 5. Add or update tests at the same boundary as the behavior.
-6. Run the narrowest relevant checks, then the full required gate when practical.
-7. Review the diff against the issue, design, security, native-resource, and licensing constraints.
+6. Work in coherent implementation phases. Run focused checks while building, then perform one short, risk-focused review at the end of each phase rather than stopping for a formal review after every action.
+7. Review the phase diff against the issue, design, security, native-resource, and licensing constraints.
 8. Report what changed, verification evidence, residual risks, and follow-up work.
 
 Never mark work done because code compiles. Done means acceptance criteria are met and the appropriate automated and hardware/manual evidence exists.
@@ -80,7 +80,7 @@ Delegation rules:
 - Prefer parallel read-heavy work. Do not give multiple agents overlapping write ownership.
 - For parallel implementation, use separate worktrees or disjoint file sets and identify the integration owner first.
 - Ask subagents to return findings and file references, not raw logs.
-- A lower-cost agent may perform mechanical edits, inventories, fixture creation, or narrow tests. A stronger agent or the main agent must review its diff and rerun the relevant checks.
+- A lower-cost agent may perform mechanical edits, inventories, fixture creation, or narrow tests. Complete substantial, coherent phases before requesting a short independent review; the main agent then reviews the diff and reruns the relevant checks.
 - Do not use a reviewer to rubber-stamp its own implementation. Verification must be independent for risky work.
 - Stop delegating when coordination or context transfer costs more than doing the work in the main thread.
 

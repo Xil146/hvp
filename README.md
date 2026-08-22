@@ -1,8 +1,12 @@
 # HVP
 
-HVP is a planned lightweight Windows video player for large local movie files, with automatic HDR/SDR handling, hardware decoding, subtitles, audio-track selection, and a deliberately minimal interface.
+HVP is an early Windows local-video-player preview for large movie files. The
+current milestone plays one local file through a pinned private `libmpv` DLL,
+with basic transport controls and drag-and-drop.
 
-The project is currently in the design and repository-foundation stage. There is no runnable build yet.
+`0.1.0-preview.1` is a development preview. It is not a stable public release:
+the clean-machine and broader real-file validation evidence tracked by issue #6
+is still outstanding.
 
 ## Start here
 
@@ -11,9 +15,24 @@ The project is currently in the design and repository-foundation stage. There is
 - Design catalog: [`Docs/master_design.md`](Docs/master_design.md)
 - Contribution workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
+## Run the preview
+
+On Windows with the .NET 10 SDK, from the repository root:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\eng\native\Get-LibmpvBundle.ps1
+dotnet restore .\Hvp.slnx --locked-mode
+dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true --no-restore
+& .\src\Hvp.App\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\HVP-win-x64.exe
+```
+
+Drag one local `.mp4`, `.mkv`, `.mov`, `.avi`, `.webm`, or `.m4v` file onto the
+window. The publish target stages the pinned DLL and current notice files.
+
 ## Planned user experience
 
-The primary Windows x64 release will be one offline installer. It installs one HVP application with the .NET runtime, media engine, codecs, and supporting DLLs included; users will not source dependencies or need a network connection to install or run it.
+The first release artifact is one offline self-contained Windows x64 folder.
+An installer is deferred until playback is proven.
 
 ## Technology direction
 
@@ -26,4 +45,6 @@ See the implementation plan for the licensing, native-binary, and installed-payl
 
 ## License
 
-HVP source code is licensed under the [MIT License](LICENSE). Bundled third-party components retain their own licenses and will be listed in `THIRD_PARTY_NOTICES.md` before binary releases.
+HVP source code is licensed under the [MIT License](LICENSE). The development
+preview's pinned native bundle and current notice record are described in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

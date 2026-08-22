@@ -24,4 +24,24 @@ public sealed class PlaybackEngineBoundaryTests
 
         Assert.Equal(PlaybackState.Idle, engine.Snapshot.State);
     }
+
+    [Fact]
+    public async Task Libmpv_engine_reports_a_helpful_error_when_private_dll_is_missing()
+    {
+        await using LibmpvPlaybackEngine engine = new();
+
+        FileNotFoundException exception = await Assert.ThrowsAsync<FileNotFoundException>(
+            () => engine.InitializeAsync((nint)123));
+
+        Assert.Contains("private libmpv", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Libmpv_engine_dispose_is_idempotent_before_initialization()
+    {
+        LibmpvPlaybackEngine engine = new();
+
+        await engine.DisposeAsync();
+        await engine.DisposeAsync();
+    }
 }
