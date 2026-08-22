@@ -8,7 +8,7 @@
         MinWidth="640"
         MinHeight="420"
         AllowDrop="True"
-        KeyDown="Window_KeyDown"
+        PreviewKeyDown="Window_PreviewKeyDown"
         PreviewDragOver="Window_PreviewDragOver"
         Drop="Window_Drop">
   <Grid>
@@ -16,7 +16,7 @@
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
-    <windows:VideoHost x:Name="VideoHost" AllowDrop="True" />
+    <windows:VideoHost x:Name="VideoHost" AllowDrop="True" PreviewMouseRightButtonUp="VideoHost_PreviewMouseRightButtonUp" />
     <Border Grid.Row="1" Padding="12" Background="#202020">
       <Grid>
         <Grid.ColumnDefinitions>
@@ -25,6 +25,8 @@
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="120" />
           <ColumnDefinition Width="120" />
         </Grid.ColumnDefinitions>
         <Button Grid.Column="0" Margin="0,0,8,0" Padding="12,4" Click="Open_Click" Content="Open file" />
@@ -32,7 +34,12 @@
         <Button x:Name="StopButton" Grid.Column="2" Margin="0,0,8,0" Padding="12,4" Click="Stop_Click" Content="Stop" IsEnabled="False" />
         <Slider x:Name="SeekSlider" Grid.Column="3" Margin="0,0,12,0" Minimum="0" Maximum="100" IsEnabled="False" ValueChanged="Seek_ValueChanged" />
         <TextBlock x:Name="StatusText" Grid.Column="4" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="White" Text="Open a local video file" />
-        <Slider x:Name="VolumeSlider" Grid.Column="5" Minimum="0" Maximum="100" Value="100" ValueChanged="Volume_ValueChanged" />
+        <Button x:Name="FullscreenButton" Grid.Column="5" Margin="0,0,8,0" Padding="12,4" Click="Fullscreen_Click" Content="Fullscreen" />
+        <StackPanel Grid.Column="6" Margin="0,0,12,0" VerticalAlignment="Center">
+          <TextBlock x:Name="StreamStatusText" Foreground="#B8D8FF" Text="Stream: unavailable" />
+          <TextBlock Text="Output HDR: not evaluated" Foreground="#A8A8A8" FontSize="11" />
+        </StackPanel>
+        <Slider x:Name="VolumeSlider" Grid.Column="7" Minimum="0" Maximum="100" Value="100" ValueChanged="Volume_ValueChanged" />
       </Grid>
     </Border>
   </Grid>

@@ -12,7 +12,7 @@ Status: Proposed
 - Set initialization-only options before `mpv_initialize`.
 - Prefer `vo=gpu-next`, D3D11 output/context, `hwdec=auto-safe`, and automatic colorspace signaling.
 - Use structured command arrays for `loadfile` and other commands; never parse or escape user paths into a command string.
-- Observe only properties required to build the normalized playback snapshot.
+- Observe only properties required to build the normalized playback snapshot, stream descriptor, and subtitle-track list.
 - Treat unsupported/unknown properties as capability differences, not fatal errors.
 
 The first spike must validate exact option compatibility against the pinned mpv version; planned defaults are not frozen until that evidence exists.
@@ -29,7 +29,7 @@ The interface should cover:
 - diagnostic version/options/log export;
 - asynchronous, idempotent disposal.
 
-Keep commands semantic. UI code asks to `SelectSubtitle(trackId)` rather than setting raw mpv properties.
+Keep commands semantic. UI code asks to `SelectSubtitle(trackId)` or `DisableSubtitles()` rather than setting raw mpv properties. Track IDs, title/language values, and stream facts are copied into immutable core models before UI dispatch.
 
 ## Native ownership
 
@@ -44,7 +44,7 @@ Keep commands semantic. UI code asks to `SelectSubtitle(trackId)` rather than se
 
 One long-lived event pump waits with cancellation-friendly intervals, converts mpv events, and emits immutable managed snapshots. A wakeup callback may signal the pump but performs no WPF work and never throws across the native boundary.
 
-Important events include file loaded, start/end file, property change, track changes, video reconfiguration, seek/playback restart, log message, and shutdown. Duplicate/high-frequency time updates may be coalesced before reaching the UI.
+Important events include file loaded, start/end file, property change, track changes, video reconfiguration, seek/playback restart, log message, and shutdown. `file-loaded` and track-change handling refresh the normalized stream descriptor and subtitle list. Duplicate/high-frequency time updates may be coalesced before reaching the UI.
 
 ## Open and fallback flow
 
