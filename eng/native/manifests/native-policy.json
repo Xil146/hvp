@@ -1,0 +1,183 @@
+{
+  "$schema": "schemas/native-policy.schema.json",
+  "schemaVersion": 2,
+  "kind": "hvp-native-policy",
+  "forbiddenInputs": [
+    "ambient-path",
+    "current-directory",
+    "glad",
+    "meson-wrap",
+    "pacman-sync",
+    "unlocked-msys2-package",
+    "vulkan-headers"
+  ],
+  "nativeLoadPolicy": {
+    "allowCurrentDirectory": false,
+    "allowAmbientPath": false,
+    "overrideEnvironmentVariable": "HVP_LIBMPV_PATH",
+    "overrideMustBeAbsolute": true,
+    "invalidOverrideFails": true
+  },
+  "required": {
+    "mpv": [
+      "--wrap-mode=nofallback",
+      "-Dbuild-date=false",
+      "-Dcplayer=false",
+      "-Dgpl=false",
+      "-Dlibmpv=true"
+    ],
+    "ffmpeg": [
+      "--disable-autodetect",
+      "--disable-avdevice",
+      "--disable-doc",
+      "--disable-network",
+      "--disable-programs",
+      "--disable-static",
+      "--enable-avcodec",
+      "--enable-avfilter",
+      "--enable-avformat",
+      "--enable-d3d11va",
+      "--enable-dxva2",
+      "--enable-shared",
+      "--enable-swresample",
+      "--enable-swscale",
+      "--enable-zlib"
+    ],
+    "libplacebo": [
+      "--wrap-mode=nofallback",
+      "-Dbench=false",
+      "-Dd3d11=enabled",
+      "-Ddemos=false",
+      "-Ddovi=disabled",
+      "-Dfuzz=false",
+      "-Dglslang=enabled",
+      "-Dlcms=disabled",
+      "-Dlibdovi=disabled",
+      "-Dopengl=disabled",
+      "-Dprefer_static=false",
+      "-Dshaderc=disabled",
+      "-Dtests=false",
+      "-Dunwind=disabled",
+      "-Dvulkan=disabled",
+      "-Dxxhash=disabled"
+    ],
+    "spirv-cross": [
+      "-DSPIRV_CROSS_CLI=OFF",
+      "-DSPIRV_CROSS_ENABLE_CPP=OFF",
+      "-DSPIRV_CROSS_ENABLE_C_API=ON",
+      "-DSPIRV_CROSS_ENABLE_GLSL=ON",
+      "-DSPIRV_CROSS_ENABLE_HLSL=ON",
+      "-DSPIRV_CROSS_ENABLE_MSL=OFF",
+      "-DSPIRV_CROSS_ENABLE_REFLECT=OFF",
+      "-DSPIRV_CROSS_ENABLE_TESTS=OFF",
+      "-DSPIRV_CROSS_ENABLE_UTIL=OFF",
+      "-DSPIRV_CROSS_SHARED=ON",
+      "-DSPIRV_CROSS_STATIC=OFF"
+    ],
+    "glslang": [
+      "-DALLOW_EXTERNAL_GTEST=OFF",
+      "-DALLOW_EXTERNAL_SPIRV_TOOLS=OFF",
+      "-DBUILD_EXTERNAL=OFF",
+      "-DBUILD_SHARED_LIBS=ON",
+      "-DENABLE_GLSLANG_BINARIES=OFF",
+      "-DENABLE_HLSL=OFF",
+      "-DENABLE_OPT=OFF",
+      "-DENABLE_SPIRV=ON",
+      "-DGLSLANG_ENABLE_INSTALL=ON",
+      "-DGLSLANG_TESTS=OFF"
+    ],
+    "libass": [
+      "--wrap-mode=nofallback",
+      "-Dcheckasm=disabled",
+      "-Dcompare=disabled",
+      "-Ddirectwrite=enabled",
+      "-Dfontconfig=disabled",
+      "-Dfuzz=disabled",
+      "-Dlibunibreak=disabled",
+      "-Dprofile=disabled",
+      "-Drequire-system-font-provider=true",
+      "-Dtest=disabled"
+    ],
+    "freetype": [
+      "--wrap-mode=nofallback",
+      "-Dbrotli=disabled",
+      "-Dbzip2=disabled",
+      "-Derror_strings=false",
+      "-Dharfbuzz=disabled",
+      "-Dmmap=disabled",
+      "-Dpng=disabled",
+      "-Dtests=disabled",
+      "-Dzlib=external"
+    ],
+    "fribidi": [
+      "--wrap-mode=nofallback",
+      "-Dbin=false",
+      "-Ddeprecated=false",
+      "-Ddocs=false",
+      "-Dtests=false"
+    ],
+    "harfbuzz": [
+      "--wrap-mode=nofallback",
+      "-Dbenchmark=disabled",
+      "-Dcairo=disabled",
+      "-Dchafa=disabled",
+      "-Dcoretext=disabled",
+      "-Ddirectwrite=disabled",
+      "-Ddocs=disabled",
+      "-Dexperimental_api=false",
+      "-Dfontations=disabled",
+      "-Dfreetype=disabled",
+      "-Dgdi=disabled",
+      "-Dglib=disabled",
+      "-Dgobject=disabled",
+      "-Dgpu=disabled",
+      "-Dgpu_demo=disabled",
+      "-Dgraphite=disabled",
+      "-Dgraphite2=disabled",
+      "-Dharfrust=disabled",
+      "-Dicu=disabled",
+      "-Dintrospection=disabled",
+      "-Dkbts=disabled",
+      "-Dpng=disabled",
+      "-Dragel_subproject=false",
+      "-Draster=disabled",
+      "-Dsubset=disabled",
+      "-Dtests=disabled",
+      "-Dutilities=disabled",
+      "-Dvector=disabled",
+      "-Dwasm=disabled",
+      "-Dzlib=disabled"
+    ],
+    "zlib": [
+      "-DZLIB_BUILD_SHARED=ON",
+      "-DZLIB_BUILD_STATIC=OFF",
+      "-DZLIB_BUILD_TESTING=OFF",
+      "-DZLIB_INSTALL=ON"
+    ]
+  },
+  "forbiddenOptionKeys": [
+    "--enable-gpl",
+    "--enable-libcurl",
+    "--enable-network",
+    "--enable-nonfree",
+    "--wrap-mode=forcefallback",
+    "-Dgpl=true",
+    "-Dprefer_static=true"
+  ],
+  "effectiveEvidence": {
+    "mpv": ["meson-introspection", "dependency-paths", "compiled-source-list"],
+    "ffmpeg": ["ffmpeg-config", "dependency-paths", "compiled-source-list"],
+    "libplacebo": ["meson-introspection", "dependency-paths", "compiled-source-list"],
+    "libass": ["meson-introspection", "dependency-paths", "compiled-source-list"],
+    "spirv-cross": ["cmake-cache", "dependency-paths", "compiled-source-list"],
+    "glslang": ["cmake-cache", "dependency-paths", "compiled-source-list"],
+    "freetype": ["meson-introspection", "dependency-paths", "compiled-source-list"],
+    "fribidi": ["meson-introspection", "dependency-paths", "compiled-source-list"],
+    "harfbuzz": ["meson-introspection", "dependency-paths", "compiled-source-list"],
+    "zlib": ["cmake-cache", "dependency-paths", "compiled-source-list"]
+  },
+  "effectiveAssertions": {
+    "libass": ["CONFIG_ICONV=0", "isolated-target-search"],
+    "all": ["no-ambient-target-dependencies", "no-unapproved-enabled-features"]
+  }
+}

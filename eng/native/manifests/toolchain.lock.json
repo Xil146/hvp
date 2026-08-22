@@ -1,0 +1,16 @@
+{
+  "$schema": "schemas/toolchain-lock.schema.json",
+  "schemaVersion": 2,
+  "kind": "hvp-native-toolchain-lock",
+  "platform": "windows-x64",
+  "route": "MSYS2 CLANG64",
+  "architecture": "x86_64",
+  "baseArchive": null,
+  "packages": [],
+  "requiredPackageIds": [
+    "bash", "clang", "cmake", "coreutils", "git", "gzip", "lld", "llvm",
+    "make", "meson", "nasm", "ninja", "patch", "pkgconf", "python", "tar", "xz"
+  ],
+  "packageDatabase": null,
+  "notes": "Intentionally incomplete; production requires a dated base archive, complete recursive signed local package closure, preserved package database, and no repository sync."
+}
