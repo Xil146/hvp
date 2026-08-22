@@ -1,0 +1,34 @@
+{
+  "$schema": "schemas/output-contract.schema.json",
+  "schemaVersion": 2,
+  "kind": "hvp-native-output-contract",
+  "architecture": "x64",
+  "requiredRoles": [
+    "libmpv", "avcodec", "avfilter", "avformat", "avutil", "swresample",
+    "swscale", "libplacebo", "libass", "freetype", "fribidi", "harfbuzz",
+    "zlib", "spirv-cross", "glslang", "spirv"
+  ],
+  "outputs": [
+    { "role": "libmpv", "sourceNode": "mpv", "path": "libmpv-2.dll", "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "avcodec", "sourceNode": "ffmpeg", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "avfilter", "sourceNode": "ffmpeg", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "avformat", "sourceNode": "ffmpeg", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "avutil", "sourceNode": "ffmpeg", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "swresample", "sourceNode": "ffmpeg", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "swscale", "sourceNode": "ffmpeg", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "libplacebo", "sourceNode": "libplacebo", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "libass", "sourceNode": "libass", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "freetype", "sourceNode": "freetype", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "fribidi", "sourceNode": "fribidi", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "harfbuzz", "sourceNode": "harfbuzz", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "zlib", "sourceNode": "zlib", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "spirv-cross", "sourceNode": "spirv-cross", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "glslang", "sourceNode": "glslang", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null },
+    { "role": "spirv", "sourceNode": "glslang", "path": null, "sha256": null, "peMachine": null, "imports": null, "exports": null, "apiVersion": null, "licenseConclusion": null }
+  ],
+  "closureEvidence": {
+    "recursiveImportsComplete": null,
+    "unexpectedDlls": null,
+    "systemDllAllowlistVersion": null
+  }
+}
