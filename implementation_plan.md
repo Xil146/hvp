@@ -156,7 +156,7 @@ Deliverables:
 
 - `IPlaybackEngine` contract and normalized event/state models.
 - State machine: `Idle -> Opening -> Ready/Playing/Paused -> Ended/Error -> Idle`.
-- Minimal control bar, seek state, volume/mute, fullscreen, open-file dialog, drag/drop, and keyboard shortcuts.
+- Minimal control bar, seek state, volume/mute, fullscreen, open-file dialog, drag/drop, keyboard shortcuts that work while the native video host has focus, and a video right-click context menu for subtitle selection.
 - Loading, unsupported-file, and decoder-failure states that preserve the current window.
 - Power/screensaver inhibition only during active video playback.
 

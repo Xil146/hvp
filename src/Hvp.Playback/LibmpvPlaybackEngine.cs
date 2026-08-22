@@ -14,8 +14,7 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
     private const int MpvEventStartFile = 6;
     private const int MpvEventEndFile = 7;
     private const int MpvEventFileLoaded = 8;
-    private const int MpvEventPause = 12;
-    private const int MpvEventUnpause = 13;
+    private const int MpvEventVideoReconfig = 17;
     private readonly object gate = new();
     // Serializes every use of mpv_handle* with mpv_terminate_destroy.
     private readonly object nativeCallGate = new();
@@ -108,7 +107,7 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
     public Task SetPausedAsync(bool paused, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return ExecuteCommandAsync(cancellationToken, "set", "pause", paused ? "yes" : "no");
+        return SetPausedCoreAsync(paused, cancellationToken);
     }
 
     public Task SeekAsync(TimeSpan position, CancellationToken cancellationToken = default)
@@ -148,6 +147,13 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
         }
 
         return ExecuteCommandAsync(cancellationToken, "set", "volume", Math.Clamp(volume, 0, 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    public async Task SetSubtitleAsync(int? trackId, CancellationToken cancellationToken = default)
+    {
+        string selection = trackId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "no";
+        await ExecuteCommandAsync(cancellationToken, "set", "sid", selection).ConfigureAwait(false);
+        TransformSnapshot(current => current with { SelectedSubtitleTrackId = trackId });
     }
 
     public Task StopAsync(CancellationToken cancellationToken = default)
@@ -257,11 +263,15 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
                         UpdateSnapshot(new PlaybackSnapshot(PlaybackState.Opening));
                         break;
                     case MpvEventFileLoaded:
-                    case MpvEventUnpause:
-                        UpdateSnapshot(new PlaybackSnapshot(PlaybackState.Playing));
+                        UpdateSnapshot(new PlaybackSnapshot(
+                            PlaybackState.Playing,
+                            Stream: ReadStreamDescriptor(),
+                            SubtitleTracks: ReadSubtitleTracks(),
+                            SelectedSubtitleTrackId: ReadSelectedSubtitleTrackId()));
                         break;
-                    case MpvEventPause:
-                        UpdateSnapshot(new PlaybackSnapshot(PlaybackState.Paused));
+                    case MpvEventVideoReconfig:
+                        StreamDescriptor descriptor = ReadStreamDescriptor();
+                        TransformSnapshot(current => current with { Stream = descriptor });
                         break;
                     case MpvEventEndFile:
                         MpvEndFileEvent endFile = nativeEvent.Data == nint.Zero
@@ -309,6 +319,98 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
     {
         await ExecuteCommandAsync(cancellationToken, "stop").ConfigureAwait(false);
         UpdateSnapshot(PlaybackSnapshot.Idle);
+    }
+
+    private async Task SetPausedCoreAsync(bool paused, CancellationToken cancellationToken)
+    {
+        await ExecuteCommandAsync(cancellationToken, "set", "pause", paused ? "yes" : "no").ConfigureAwait(false);
+        TransformSnapshot(current => current with { State = paused ? PlaybackState.Paused : PlaybackState.Playing });
+    }
+
+    private StreamDescriptor ReadStreamDescriptor()
+    {
+        return StreamDescriptorFactory.Create(
+            GetPropertyString("width"),
+            GetPropertyString("height"),
+            GetPropertyString("video-format"),
+            GetPropertyString("video-params/pixelformat"),
+            GetPropertyString("video-params/gamma"),
+            GetPropertyString("video-params/primaries"));
+    }
+
+    private IReadOnlyList<SubtitleTrack> ReadSubtitleTracks()
+    {
+        int count = TryParseInt(GetPropertyString("track-list/count")) ?? 0;
+        List<SubtitleTrack> tracks = [];
+        for (int index = 0; index < count; index++)
+        {
+            string prefix = $"track-list/{index}";
+            if (!string.Equals(GetPropertyString($"{prefix}/type"), "sub", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int? id = TryParseInt(GetPropertyString($"{prefix}/id"));
+            if (id is null)
+            {
+                continue;
+            }
+
+            string? title = GetPropertyString($"{prefix}/title");
+            string? language = GetPropertyString($"{prefix}/lang");
+            string label = !string.IsNullOrWhiteSpace(title)
+                ? title
+                : !string.IsNullOrWhiteSpace(language) ? language : $"Subtitle {id.Value}";
+            bool external = string.Equals(GetPropertyString($"{prefix}/external"), "yes", StringComparison.OrdinalIgnoreCase);
+            tracks.Add(new SubtitleTrack(id.Value, label, external));
+        }
+
+        return tracks;
+    }
+
+    private int? ReadSelectedSubtitleTrackId()
+    {
+        string? selected = GetPropertyString("sid");
+        return int.TryParse(selected, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int id) ? id : null;
+    }
+
+    private static int? TryParseInt(string? value) =>
+        int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int result) ? result : null;
+
+    private string? GetPropertyString(string name)
+    {
+        lock (nativeCallGate)
+        {
+            lock (gate)
+            {
+                if (disposing || handle == nint.Zero || native is null)
+                {
+                    return null;
+                }
+
+                nint value = native.GetPropertyString(handle, name);
+                if (value == nint.Zero)
+                {
+                    return null;
+                }
+
+                try { return Marshal.PtrToStringUTF8(value); }
+                finally { native.Free(value); }
+            }
+        }
+    }
+
+    private void TransformSnapshot(Func<PlaybackSnapshot, PlaybackSnapshot> transform)
+    {
+        EventHandler<PlaybackSnapshot>? changed;
+        PlaybackSnapshot value;
+        lock (gate)
+        {
+            value = transform(snapshot);
+            changed = UpdateSnapshot_NoLock(value);
+        }
+
+        changed?.Invoke(this, value);
     }
 
     private void SetOption(string name, string value)
@@ -439,6 +541,8 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
             SetOptionString = GetDelegate<SetOptionStringDelegate>(module, "mpv_set_option_string");
             Command = GetDelegate<CommandDelegate>(module, "mpv_command");
             WaitEvent = GetDelegate<WaitEventDelegate>(module, "mpv_wait_event");
+            GetPropertyString = GetDelegate<GetPropertyStringDelegate>(module, "mpv_get_property_string");
+            Free = GetDelegate<FreeDelegate>(module, "mpv_free");
         }
 
         public ClientApiVersionDelegate ClientApiVersion { get; }
@@ -448,6 +552,8 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
         public SetOptionStringDelegate SetOptionString { get; }
         public CommandDelegate Command { get; }
         public WaitEventDelegate WaitEvent { get; }
+        public GetPropertyStringDelegate GetPropertyString { get; }
+        public FreeDelegate Free { get; }
 
         public static NativeApi From(nint module) => new(module);
 
@@ -461,6 +567,8 @@ public sealed class LibmpvPlaybackEngine : IPlaybackController
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int SetOptionStringDelegate(nint handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string name, [MarshalAs(UnmanagedType.LPUTF8Str)] string value);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate int CommandDelegate(nint handle, nint arguments);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate nint WaitEventDelegate(nint handle, double timeout);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate nint GetPropertyStringDelegate(nint handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] public delegate void FreeDelegate(nint data);
     }
 
     private sealed class PrivateDllDirectory : IDisposable

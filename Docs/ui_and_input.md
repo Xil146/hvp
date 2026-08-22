@@ -32,6 +32,7 @@ WPF controls must not be drawn over the native surface because `HwndHost` has ai
 - Subtitle selector always includes Off.
 - Status uses examples such as `HDR10 • 2160p • HEVC 10-bit` and exposes detailed diagnostics without claiming facts that are unknown.
 - Open File uses a local file dialog and supports drag/drop of one file. Multiple-file playlist semantics are out of scope.
+- Right-clicking the video surface opens a context menu. Its `Subtitles` submenu contains `Off` and each observed embedded or matching external subtitle track, with language/title details where available. The current selection is checked; unavailable track information is visibly unavailable rather than guessed.
 
 ## Keyboard
 
@@ -48,6 +49,8 @@ WPF controls must not be drawn over the native surface because `HwndHost` has ai
 | M | Toggle mute |
 
 Keyboard handling belongs at the WPF window boundary so focus in the native child HWND does not swallow global playback shortcuts. Do not override text-entry or dialog keyboard behavior.
+
+The native video host forwards its keyboard messages through a narrow managed input callback. This lets the window apply the same shortcut policy while the child HWND owns focus, without making WPF call libmpv directly.
 
 ## Fullscreen and monitors
 

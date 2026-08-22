@@ -14,6 +14,8 @@ Preserve the content's intended brightness and color as accurately as the active
 
 Container tags can be missing or wrong. The UI distinguishes `Unknown HDR` from confirmed HDR types and diagnostics retain the evidence used to classify the stream.
 
+The compact stream indicator may show observed source resolution, codec, bit depth, and dynamic-range classification as soon as they are available. It must label the result as source information until an effective Windows/display output fact has also been observed; it never equates an HDR source with active native HDR output.
+
 ## Source classification
 
 Apply the most specific supported evidence in this order:
