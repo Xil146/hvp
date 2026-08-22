@@ -23,5 +23,9 @@ public interface IPlaybackController : IPlaybackEngine
 
     Task SetSubtitleAsync(int? trackId, CancellationToken cancellationToken = default);
 
+    Task SetAudioAsync(int trackId, CancellationToken cancellationToken = default);
+
+    Task SetVideoAsync(int trackId, CancellationToken cancellationToken = default);
+
     Task StopAsync(CancellationToken cancellationToken = default);
 }

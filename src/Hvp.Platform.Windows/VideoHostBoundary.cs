@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace Hvp.Platform.Windows;
 
@@ -10,18 +11,32 @@ public sealed class VideoHost : HwndHost
     private const int WsChild = unchecked((int)0x40000000);
     private const int WsVisible = 0x10000000;
     private const int WhMouse = 7;
+    private const uint WmLButtonUp = 0x0202;
+    private const uint WmLButtonDblClk = 0x0203;
     private const uint WmRButtonUp = 0x0205;
     private readonly MouseHookProcedure mouseHookProcedure;
+    private readonly DispatcherTimer singleClickTimer;
+    private bool ignoreNextLeftButtonUp;
+    private int pendingVideoClicks;
     private nint mouseHook;
     private nint videoHostHandle;
 
-    public VideoHost() => mouseHookProcedure = MouseHookProc;
+    public VideoHost()
+    {
+        mouseHookProcedure = MouseHookProc;
+        singleClickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime()) };
+        singleClickTimer.Tick += SingleClickTimer_Tick;
+    }
 
     public event EventHandler<nint>? HandleCreated;
 
     public event EventHandler<VideoHostKeyEventArgs>? KeyPressed;
 
     public event EventHandler? ContextMenuRequested;
+
+    public event EventHandler? VideoClicked;
+
+    public event EventHandler? VideoDoubleClicked;
 
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
     {
@@ -62,6 +77,8 @@ public sealed class VideoHost : HwndHost
 
     protected override void DestroyWindowCore(HandleRef hwnd)
     {
+        singleClickTimer.Stop();
+        pendingVideoClicks = 0;
         RemoveMouseHook();
         videoHostHandle = nint.Zero;
         if (hwnd.Handle != nint.Zero && !DestroyWindow(hwnd.Handle))
@@ -108,13 +125,42 @@ public sealed class VideoHost : HwndHost
     {
         try
         {
-            if (code >= 0 && unchecked((uint)wParam.ToInt64()) == WmRButtonUp)
+            if (code >= 0)
             {
+                uint message = unchecked((uint)wParam.ToInt64());
                 MouseHookStruct mouse = Marshal.PtrToStructure<MouseHookStruct>(lParam);
-                if (IsPointInsideVideoHost(mouse.X, mouse.Y))
+                if (!IsPointerOverVideoHost(mouse.X, mouse.Y))
                 {
-                    _ = Dispatcher.BeginInvoke(() => ContextMenuRequested?.Invoke(this, EventArgs.Empty));
-                    return new nint(1);
+                    return CallNextHookEx(mouseHook, code, wParam, lParam);
+                }
+
+                switch (message)
+                {
+                    case WmRButtonUp:
+                        _ = Dispatcher.BeginInvoke(() => ContextMenuRequested?.Invoke(this, EventArgs.Empty));
+                        return new nint(1);
+                    case WmLButtonUp when ignoreNextLeftButtonUp:
+                        ignoreNextLeftButtonUp = false;
+                        return new nint(1);
+                    case WmLButtonUp:
+                        _ = Dispatcher.BeginInvoke(ArmSingleClick);
+                        return new nint(1);
+                    case WmLButtonDblClk:
+                        ignoreNextLeftButtonUp = true;
+                        _ = Dispatcher.BeginInvoke(() =>
+                        {
+                            if (pendingVideoClicks > 0)
+                            {
+                                pendingVideoClicks--;
+                            }
+
+                            if (pendingVideoClicks == 0)
+                            {
+                                singleClickTimer.Stop();
+                            }
+                            VideoDoubleClicked?.Invoke(this, EventArgs.Empty);
+                        });
+                        return new nint(1);
                 }
             }
         }
@@ -126,14 +172,33 @@ public sealed class VideoHost : HwndHost
         return CallNextHookEx(mouseHook, code, wParam, lParam);
     }
 
-    private bool IsPointInsideVideoHost(int x, int y)
+    private void ArmSingleClick()
     {
-        if (videoHostHandle == nint.Zero || !GetWindowRect(videoHostHandle, out NativeRect bounds))
+        pendingVideoClicks++;
+        singleClickTimer.Stop();
+        singleClickTimer.Start();
+    }
+
+    private void SingleClickTimer_Tick(object? sender, EventArgs e)
+    {
+        singleClickTimer.Stop();
+        int clickCount = pendingVideoClicks;
+        pendingVideoClicks = 0;
+        if ((clickCount & 1) == 1)
+        {
+            VideoClicked?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private bool IsPointerOverVideoHost(int x, int y)
+    {
+        if (videoHostHandle == nint.Zero)
         {
             return false;
         }
 
-        return x >= bounds.Left && x < bounds.Right && y >= bounds.Top && y < bounds.Bottom;
+        nint target = WindowFromPoint(new NativePoint(x, y));
+        return target == videoHostHandle || (target != nint.Zero && IsChild(videoHostHandle, target));
     }
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -166,12 +231,10 @@ public sealed class VideoHost : HwndHost
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private readonly struct NativeRect
+    private readonly struct NativePoint(int x, int y)
     {
-        public readonly int Left;
-        public readonly int Top;
-        public readonly int Right;
-        public readonly int Bottom;
+        public readonly int X = x;
+        public readonly int Y = y;
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -192,7 +255,14 @@ public sealed class VideoHost : HwndHost
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetWindowRect(nint hwnd, out NativeRect rectangle);
+    private static extern bool IsChild(nint parent, nint child);
+
+    [DllImport("user32.dll")]
+    private static extern nint WindowFromPoint(NativePoint point);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
+
 }
 
 public sealed class VideoHostKeyEventArgs(Key key, ModifierKeys modifiers) : EventArgs
