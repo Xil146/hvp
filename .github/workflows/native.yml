@@ -1,0 +1,83 @@
+name: Native provenance contract
+
+on:
+  pull_request:
+    paths: ["eng/native/**", "eng/release/**", "THIRD_PARTY_NOTICES.md", "licenses/**", ".github/workflows/native.yml"]
+  push:
+    branches: [main]
+    paths: ["eng/native/**", "eng/release/**", "THIRD_PARTY_NOTICES.md", "licenses/**", ".github/workflows/native.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-contract:
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out pinned revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Validate incomplete foundation stays fail-closed
+        shell: pwsh
+        run: |
+          .\eng\native\scripts\Test-NativeLock.ps1 -AllowIncomplete
+          .\eng\native\scripts\Test-NativeSourceAcquisitionEvidence.ps1
+          .\eng\native\tests\Test-NativeFoundation.Tests.ps1
+          .\eng\native\tests\Test-NativeVerification.Tests.ps1
+          .\eng\native\tests\Test-NativeCandidateConsistency.Tests.ps1
+          .\eng\release\tests\Test-NativePayloadContract.Tests.ps1
+          .\eng\release\tests\Test-ApplicationPayloadManifest.Tests.ps1
+          $errors = @()
+          Get-ChildItem .\eng -Recurse -Filter *.ps1 | ForEach-Object {
+            $tokens = $null; $parseErrors = $null
+            [void][Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$parseErrors)
+            $errors += $parseErrors
+          }
+          if ($errors.Count -ne 0) { $errors | Format-List; exit 1 }
+      - name: Upload provenance templates and lock evidence
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: native-provenance-contract
+          path: |
+            eng/native/manifests
+            eng/native/evidence
+            eng/native/templates
+            THIRD_PARTY_NOTICES.md
+            licenses/README.md
+          if-no-files-found: error
+      - name: Detect production-ready input lock
+        id: native-lock
+        shell: pwsh
+        run: |
+          try {
+            .\eng\native\scripts\Test-NativeLock.ps1 -BuildInputsOnly
+            "ready=true" >> $env:GITHUB_OUTPUT
+          }
+          catch {
+            Write-Host "Native build inputs are not yet verified: $($_.Exception.Message)"
+            "ready=false" >> $env:GITHUB_OUTPUT
+          }
+      - name: Acquire locked source and toolchain archives
+        if: steps.native-lock.outputs.ready == 'true'
+        shell: pwsh
+        run: |
+          .\eng\native\scripts\Invoke-NativeSourceAcquisition.ps1 -DownloadDirectory .\artifacts\source-downloads -QuarantineOnly
+          .\eng\native\scripts\Invoke-NativeToolchainAcquisition.ps1 -DownloadDirectory .\artifacts\toolchain-archives
+      - name: Install and build the locked native inputs twice
+        if: steps.native-lock.outputs.ready == 'true'
+        shell: pwsh
+        run: |
+          $work = [IO.Path]::GetFullPath('.\artifacts\native-work')
+          New-Item -ItemType Directory -Path $work -Force | Out-Null
+          $toolchain = Join-Path $work 'msys64'
+          $toolEvidence = Join-Path $work 'toolchain-install.json'
+          .\eng\native\scripts\Install-NativeToolchain.ps1 -ArchiveDirectory ([IO.Path]::GetFullPath('.\artifacts\toolchain-archives')) -InstallDirectory $toolchain -TarPath (Get-Command tar.exe).Source -GpgPath (Get-Command gpg.exe).Source -KeyringDirectory ([IO.Path]::GetFullPath('.\eng\native\keys')) -EvidencePath $toolEvidence
+          .\eng\native\scripts\Invoke-NativeReproducibilityBuild.ps1 -Msys2Root $toolchain -ToolchainEvidencePath $toolEvidence -SourceArchiveDirectory ([IO.Path]::GetFullPath('.\artifacts\source-downloads\quarantine')) -TarPath (Get-Command tar.exe).Source -RoleMapPath ([IO.Path]::GetFullPath('.\eng\native\manifests\output-role-map.json')) -WorkingRoot (Join-Path $work 'repro') -EvidencePath (Join-Path $work 'reproducibility.json')
+      - name: Upload locked native build evidence
+        if: steps.native-lock.outputs.ready == 'true'
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: native-build-evidence
+          path: artifacts/native-work
+          if-no-files-found: error

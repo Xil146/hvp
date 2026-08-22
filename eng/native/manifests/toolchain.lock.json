@@ -12,5 +12,7 @@
     "make", "meson", "nasm", "ninja", "patch", "pkgconf", "python", "tar", "xz"
   ],
   "packageDatabase": null,
-  "notes": "Intentionally incomplete; production requires a dated base archive, complete recursive signed local package closure, preserved package database, and no repository sync."
+  "bootstrap": null,
+  "closureStatus": "pending",
+  "notes": "Intentionally incomplete; production requires a dated base archive, complete recursive signed local package closure, preserved package database, and no repository sync. Archive hashes, detached-signature verification, and package dependency resolution must be obtained from the dated acquisition evidence; they are never guessed."
 }

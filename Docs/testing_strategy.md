@@ -35,6 +35,15 @@ Keep view-model behavior unit-testable. Add targeted Windows UI automation for o
 - Formatting and repository policy checks.
 - Dependency/license inventory, native checksum verification, and secret scan.
 - Self-contained multi-file publish plus manifest validation of every staged path and digest.
+- Native candidate consistency: one exact candidate cross-checks the source lock,
+  dependency graph, compiled-source evidence, PE closure, notices/license texts,
+  corresponding-source inputs, SPDX relationships, and staged native overlay.
+- Candidate templates and incomplete provenance must fail closed; a passing
+  contract test is not legal review, a clean-machine result, or GPU/HDR proof.
+- The production native path binds extracted source and installed toolchain
+  tree hashes, verifies dependency paths against private/system roots, inspects
+  ordinary and delay-load imports, and binds runtime client API evidence to the
+  selected output contract.
 - No flaky retry counted as success without a tracking issue.
 
 ## Hardware matrix

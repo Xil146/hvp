@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "hvp-corresponding-source-inputs",
+  "candidateId": "REPLACE-WITH-RELEASE-CANDIDATE-ID",
+  "sourceLockSha256": "REPLACE-WITH-64-LOWERCASE-HEX",
+  "sources": [],
+  "patches": [],
+  "buildScripts": [],
+  "archiveEntries": [],
+  "availability": "Publish the exact archive beside the binary. It contains every locked source archive, patch, reviewed build script, and instruction file needed for the candidate."
+}

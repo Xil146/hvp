@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$ManifestRoot, [switch]$AllowIncomplete)
+param([string]$ManifestRoot, [switch]$AllowIncomplete, [switch]$BuildInputsOnly)
 
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($ManifestRoot)) {
@@ -31,7 +31,7 @@ $requiredRoleOwners = @{
     'spirv-cross'='spirv-cross'; 'glslang'='glslang'; 'spirv'='glslang'
 }
 $requiredToolRoots = @('bash','clang','cmake','coreutils','git','gzip','lld','llvm','make','meson','nasm','ninja','patch','pkgconf','python','tar','xz')
-$reviewedPolicySha256 = 'e17211d53dde23291e57bb1d9e75cbedf3629cadbc0f10452e9d82fcbcd14f71'
+$reviewedPolicySha256 = '9e4c1845b78827c2327acd0eab33025a35547f67497ffde0b20a081bf18e25b4'
 $reservedName = '^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\..*)?$'
 
 function Read-Json([string]$Name) {
@@ -180,7 +180,7 @@ foreach ($source in @($inputs.sources)) {
         if (-not (Test-Hash $source.archive.sha256) -or $source.pinToCommit -ne 'verified' -or
             $source.signature.status -notin @('verified','revoked-reviewed','not-available-reviewed') -or
             [string]::IsNullOrWhiteSpace($source.signature.evidence) -or
-            [string]::IsNullOrWhiteSpace($source.licenseConcluded)) {
+            (-not $BuildInputsOnly -and [string]::IsNullOrWhiteSpace($source.licenseConcluded))) {
             throw "Production source provenance is incomplete: $($source.id)"
         }
         if ($source.signature.status -in @('verified','revoked-reviewed') -and
@@ -224,10 +224,11 @@ foreach ($output in @($outputs.outputs)) {
         Assert-RelativeWindowsPath ([string]$output.path)
         if (-not $outputPaths.Add([string]$output.path)) { throw "Duplicate or case-colliding output path: $($output.path)" }
     }
-    if (-not $AllowIncomplete) {
+    if (-not $AllowIncomplete -and -not $BuildInputsOnly) {
         Assert-RelativeWindowsPath ([string]$output.path)
         if (-not (Test-Hash $output.sha256) -or $output.peMachine -ne 'AMD64' -or
-            @($output.imports).Count -eq 0 -or @($output.exports).Count -eq 0 -or
+            @($output.imports).Count -eq 0 -or $null -eq $output.PSObject.Properties['delayImports'] -or $null -eq $output.delayImports -or @($output.exports).Count -eq 0 -or
+            [string]$output.dllCharacteristics -cnotmatch '^0x[0-9a-f]{4}$' -or
             [string]::IsNullOrWhiteSpace($output.licenseConclusion)) {
             throw "Production output evidence is incomplete: $($output.role)"
         }
@@ -236,13 +237,13 @@ foreach ($output in @($outputs.outputs)) {
             if ($apiParts.Count -ne 2 -or [int]$apiParts[0] -ne 2 -or [int]$apiParts[1] -lt 5) {
                 throw 'libmpv client API evidence must be major 2 and minor 5 or newer.'
             }
-            foreach ($requiredExport in @('mpv_client_api_version','mpv_create','mpv_initialize','mpv_terminate_destroy')) {
+            foreach ($requiredExport in @('mpv_client_api_version','mpv_create','mpv_initialize','mpv_terminate_destroy','mpv_set_option_string','mpv_command','mpv_wait_event')) {
                 if (@($output.exports) -cnotcontains $requiredExport) { throw "libmpv is missing required export evidence: $requiredExport" }
             }
         }
     }
 }
-if (-not $AllowIncomplete -and
+if (-not $AllowIncomplete -and -not $BuildInputsOnly -and
     ($outputs.architecture -ne 'x64' -or $outputs.closureEvidence.recursiveImportsComplete -ne $true -or
      @($outputs.closureEvidence.unexpectedDlls).Count -ne 0 -or
      [string]::IsNullOrWhiteSpace($outputs.closureEvidence.systemDllAllowlistVersion))) {
@@ -256,9 +257,11 @@ if ($toolchain.platform -ne 'windows-x64' -or $toolchain.route -ne 'MSYS2 CLANG6
 $hasBaseArchive = $null -ne $toolchain.baseArchive
 $hasPackages = @($toolchain.packages).Count -gt 0
 $hasPackageDatabase = $null -ne $toolchain.packageDatabase
-if (-not $AllowIncomplete -and (-not $hasBaseArchive -or -not $hasPackages -or -not $hasPackageDatabase)) {
+$hasBootstrap = $null -ne $toolchain.bootstrap
+if (-not $AllowIncomplete -and (-not $hasBaseArchive -or -not $hasPackages -or -not $hasPackageDatabase -or -not $hasBootstrap -or $toolchain.closureStatus -cne 'verified')) {
     throw 'Toolchain lock is incomplete.'
 }
+if ($hasBootstrap -and (-not (Test-Hash $toolchain.bootstrap.tarSha256) -or -not (Test-Hash $toolchain.bootstrap.gpgSha256) -or -not (Test-Hash $toolchain.bootstrap.keyringTreeSha256))) { throw 'Toolchain bootstrap identities are incomplete.' }
 if ($hasBaseArchive) {
     if ($toolchain.baseArchive.id -cne 'msys2-base' -or
         $toolchain.baseArchive.architecture -cne 'x86_64' -or

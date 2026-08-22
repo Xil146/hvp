@@ -24,7 +24,9 @@
           "sha256": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
           "peMachine": { "type": ["string", "null"] },
           "imports": { "type": ["array", "null"], "items": { "type": "string" } },
+          "delayImports": { "type": ["array", "null"], "items": { "type": "string" } },
           "exports": { "type": ["array", "null"], "items": { "type": "string" } },
+          "dllCharacteristics": { "type": ["string", "null"], "pattern": "^0x[0-9a-f]{4}$" },
           "apiVersion": { "type": ["string", "null"] },
           "licenseConclusion": { "type": ["string", "null"] }
         }

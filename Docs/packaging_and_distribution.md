@@ -39,6 +39,23 @@ SDK/runtime change must update it explicitly. Issue #6 will extend the staged
 payload with its separately approved native manifest and DLL closure rather than
 silently allowing new native files through the managed contract.
 
+### Native candidate overlay contract
+
+`eng/release/native-payload-contract.json` reserves a separately validated
+`native/` overlay for an approved native candidate. It is deliberately not an
+allow-list exception to the managed contract: a candidate must bind the exact
+source lock, dependency graph, output contract, PE records, notices, license
+texts, corresponding-source inputs, and SPDX 2.3 document. The release gate
+fails if any native DLL is missing from that overlay or differs from the
+candidate hash. Until those records and independent legal review exist, there
+is no approved native payload and this is not a release-ready claim.
+
+`Test-ReleasePayloadContract.ps1` is the final composition gate: it validates
+the independent managed manifest and the native overlay contract together.
+Release automation must invoke it with `-RequireApprovedNativeCandidate`; the
+ordinary managed scaffold CI intentionally does not pretend a native candidate
+exists.
+
 ## Native dependency policy
 
 The MIT license applies to HVP first-party source, not bundled dependencies. Do not take an arbitrary community mpv Windows build and ship it.
@@ -70,6 +87,13 @@ The app exposes About/Licenses and a command-line license display, and the insta
 - GitHub release notes with supported OS/architecture, known HDR limitations, native versions, license/source links, hardware matrix, and unsigned/signed status.
 
 ## Release pipeline
+
+The release workflow validates the managed publish before native staging. It
+then downloads `HVP-native-approved-candidate` from an explicitly reviewed
+workflow run ID (or a protected run-ID variable for tag builds), validates the
+composed managed/native contracts, and only then creates the final full-tree
+manifest and checksums. The managed-only manifest remains separate evidence and
+is never used to hash a native-bearing tree.
 
 1. Build from a clean tagged commit with pinned SDK and locked dependencies.
 2. Build/obtain the approved native bundle and verify checksums/provenance.

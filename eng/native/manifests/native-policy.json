@@ -177,7 +177,10 @@
     "zlib": ["cmake-cache", "dependency-paths", "compiled-source-list"]
   },
   "effectiveAssertions": {
-    "libass": ["CONFIG_ICONV=0", "isolated-target-search"],
-    "all": ["no-ambient-target-dependencies", "no-unapproved-enabled-features"]
+    "mpv": ["vo_gpu_next", "d3d11-context"],
+    "ffmpeg": ["CONFIG_D3D11VA=1", "CONFIG_NETWORK=0"],
+    "libplacebo": ["d3d11=enabled", "vulkan=disabled", "opengl=disabled"],
+    "libass": ["CONFIG_ICONV=0"],
+    "all": []
   }
 }

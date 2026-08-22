@@ -4,7 +4,7 @@
   "title": "HVP native toolchain lock v2",
   "type": "object",
   "additionalProperties": false,
-  "required": ["$schema", "schemaVersion", "kind", "platform", "route", "architecture", "baseArchive", "packages", "requiredPackageIds", "packageDatabase", "notes"],
+  "required": ["$schema", "schemaVersion", "kind", "platform", "route", "architecture", "baseArchive", "packages", "requiredPackageIds", "packageDatabase", "bootstrap", "closureStatus", "notes"],
   "properties": {
     "$schema": { "const": "schemas/toolchain-lock.schema.json" },
     "schemaVersion": { "const": 2 },
@@ -21,6 +21,8 @@
       "items": { "$ref": "#/$defs/id" }
     },
     "packageDatabase": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/packageDatabase" }] },
+    "bootstrap": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/bootstrap" }] },
+    "closureStatus": { "enum": ["pending", "verified"] },
     "notes": { "type": "string", "minLength": 1 }
   },
   "$defs": {
@@ -98,6 +100,17 @@
           "items": { "$ref": "#/$defs/id" }
         },
         "evidence": { "type": "string", "minLength": 1 }
+      }
+    }
+    ,
+    "bootstrap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tarSha256", "gpgSha256", "keyringTreeSha256"],
+      "properties": {
+        "tarSha256": { "$ref": "#/$defs/sha256" },
+        "gpgSha256": { "$ref": "#/$defs/sha256" },
+        "keyringTreeSha256": { "$ref": "#/$defs/sha256" }
       }
     }
   }

@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "payloadKind": "native-candidate-overlay",
+  "nativeDirectory": "native",
+  "candidateManifest": "native/native-candidate.json",
+  "releaseGate": "The overlay is rejected unless Test-NativeCandidateConsistency validates the exact candidate and every native binary is present beneath native/."
+}

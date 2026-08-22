@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xil146.github.io/hvp/schemas/native-candidate-v1.schema.json",
+  "title": "HVP native candidate evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "kind", "candidateId", "sourceLockSha256", "dependencyGraphSha256", "outputContractSha256", "bundleDirectory", "build", "sources", "binaries", "peEvidence", "smokeEvidence", "notices", "correspondingSource", "sbom", "securityReview", "independentReview", "payloadFiles"],
+  "properties": {
+    "$schema": { "const": "schemas/native-candidate.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "hvp-native-candidate" },
+    "candidateId": { "type": "string", "minLength": 1 },
+    "sourceLockSha256": { "$ref": "#/$defs/hash" },
+    "dependencyGraphSha256": { "$ref": "#/$defs/hash" },
+    "outputContractSha256": { "$ref": "#/$defs/hash" },
+    "bundleDirectory": { "$ref": "#/$defs/relative" },
+    "build": { "type": "object", "additionalProperties": false, "required": ["requestedConfigurationPath", "effectiveConfigurationPath", "compiledSourcesPath", "dependencyPathsPath", "dependencyIsolationPath", "toolIdentitiesPath", "reproducibilityEvidencePath", "reproducibilityEvidenceSha256", "reproducibility"], "properties": {
+      "requestedConfigurationPath": { "$ref": "#/$defs/relative" }, "effectiveConfigurationPath": { "$ref": "#/$defs/relative" }, "compiledSourcesPath": { "$ref": "#/$defs/relative" }, "dependencyPathsPath": { "$ref": "#/$defs/relative" }, "dependencyIsolationPath": { "$ref": "#/$defs/relative" }, "toolIdentitiesPath": { "$ref": "#/$defs/relative" },
+      "reproducibility": { "type": "object", "additionalProperties": false, "required": ["cleanBuilds", "status"], "properties": { "cleanBuilds": { "type": "array", "minItems": 2, "items": { "type": "object", "additionalProperties": false, "required": ["id", "outputHashes"], "properties": { "id": { "type": "string", "minLength": 1 }, "outputHashes": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/hash" } } } } }, "status": { "enum": ["identical", "difference-explained"] }, "differenceEvidencePath": { "type": ["string", "null"] } } },
+      "reproducibilityEvidencePath": { "$ref": "#/$defs/relative" }, "reproducibilityEvidenceSha256": { "$ref": "#/$defs/hash" }
+    } },
+    "sources": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["id", "declaredLicense", "concludedLicense", "conclusionEvidence"], "properties": { "id": { "type": "string" }, "declaredLicense": { "type": "string" }, "concludedLicense": { "type": "string" }, "conclusionEvidence": { "$ref": "#/$defs/relative" } } } },
+    "binaries": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["role", "path", "sha256", "peMachine", "imports", "delayImports", "exports", "dllCharacteristics", "sourceId", "licenseConclusion"], "properties": { "role": { "type": "string" }, "path": { "$ref": "#/$defs/relative" }, "sha256": { "$ref": "#/$defs/hash" }, "peMachine": { "const": "AMD64" }, "imports": { "type": "array", "items": { "type": "string" } }, "delayImports": { "type": "array", "items": { "type": "string" } }, "exports": { "type": "array", "items": { "type": "string" } }, "dllCharacteristics": { "type": "string", "pattern": "^0x[0-9a-f]{4}$" }, "sourceId": { "type": "string" }, "licenseConclusion": { "type": "string" } } } },
+    "peEvidence": { "$ref": "#/$defs/artifact" }, "smokeEvidence": { "$ref": "#/$defs/artifact" },
+    "notices": { "type": "object", "additionalProperties": false, "required": ["path", "sha256", "licenseDirectory", "licenseFiles"], "properties": { "path": { "$ref": "#/$defs/relative" }, "sha256": { "$ref": "#/$defs/hash" }, "licenseDirectory": { "$ref": "#/$defs/relative" }, "licenseFiles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/artifact" } } } },
+    "correspondingSource": { "type": "object", "additionalProperties": false, "required": ["path", "sha256", "archiveInputsPath", "archiveInputsSha256", "buildInstructionsPath", "buildInstructionsSha256"], "properties": { "path": { "$ref": "#/$defs/relative" }, "sha256": { "$ref": "#/$defs/hash" }, "archiveInputsPath": { "$ref": "#/$defs/relative" }, "archiveInputsSha256": { "$ref": "#/$defs/hash" }, "buildInstructionsPath": { "$ref": "#/$defs/relative" }, "buildInstructionsSha256": { "$ref": "#/$defs/hash" } } },
+    "sbom": { "type": "object", "additionalProperties": false, "required": ["path", "sha256", "format"], "properties": { "path": { "$ref": "#/$defs/relative" }, "sha256": { "$ref": "#/$defs/hash" }, "format": { "const": "SPDX-2.3" } } },
+    "securityReview": { "$ref": "#/$defs/artifact" }, "independentReview": { "$ref": "#/$defs/artifact" },
+    "payloadFiles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/artifact" } }
+  },
+  "$defs": { "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "relative": { "type": "string", "pattern": "^(?!/)(?!.*\\\\)(?!.*(^|/)\\.\\.?(/|$)).+" }, "artifact": { "type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": { "path": { "$ref": "#/$defs/relative" }, "sha256": { "$ref": "#/$defs/hash" } } } }
+}

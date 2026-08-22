@@ -2,12 +2,18 @@ name: Release candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      native_candidate_run_id:
+        description: "Run ID containing the approved HVP-native-approved-candidate artifact"
+        required: true
+        type: string
   push:
     tags:
       - "v*.*.*"
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   candidate:
@@ -17,10 +23,10 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Set up .NET 10
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           dotnet-version: 10.0.x
           cache: true
@@ -36,21 +42,44 @@ jobs:
       - name: Publish candidate
         run: dotnet publish .\src\Hvp.App\Hvp.App.csproj -c Release -r win-x64 --self-contained true --no-restore -o .\artifacts\release
 
-      - name: Generate, validate, and hash application payload
+      - name: Validate managed payload before native staging
         shell: pwsh
         run: |
           .\eng\release\Test-ManagedPayloadContract.ps1 -PayloadRoot .\artifacts\release
+          .\eng\release\New-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\managed-payload-manifest.json
+          .\eng\release\Test-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\managed-payload-manifest.json
+
+      - name: Stage reviewed native candidate artifact
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN_ID: ${{ inputs.native_candidate_run_id }}
+          PINNED_RUN_ID: ${{ vars.HVP_NATIVE_CANDIDATE_RUN_ID }}
+        run: |
+          $runId = if ($env:INPUT_RUN_ID) { $env:INPUT_RUN_ID } else { $env:PINNED_RUN_ID }
+          if ($runId -notmatch '^\d+$') { throw 'A reviewed native-candidate workflow run ID is required.' }
+          gh run download $runId --repo $env:GITHUB_REPOSITORY --name HVP-native-approved-candidate --dir .\artifacts\native-download
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $source = if (Test-Path .\artifacts\native-download\native\native-candidate.json) { '.\artifacts\native-download\native' } else { '.\artifacts\native-download' }
+          if (-not (Test-Path (Join-Path $source 'native-candidate.json') -PathType Leaf) { throw 'Downloaded artifact is not a native candidate overlay.' }
+          Copy-Item -LiteralPath $source -Destination .\artifacts\release\native -Recurse
+
+      - name: Validate and hash composed application payload
+        shell: pwsh
+        run: |
+          .\eng\release\Test-ReleasePayloadContract.ps1 -PayloadRoot .\artifacts\release -ManagedManifestPath .\artifacts\managed-payload-manifest.json -RequireApprovedNativeCandidate
           .\eng\release\New-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\payload-manifest.json
           .\eng\release\Test-ApplicationPayloadManifest.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\payload-manifest.json
           .\eng\release\New-ApplicationPayloadChecksums.ps1 -PayloadRoot .\artifacts\release -ManifestPath .\artifacts\payload-manifest.json -ChecksumsPath .\artifacts\SHA256SUMS.txt
 
       - name: Upload candidate for hardware and clean-machine testing
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: HVP-release-candidate
           path: |
             artifacts/release
             artifacts/payload-manifest.json
+            artifacts/managed-payload-manifest.json
             artifacts/SHA256SUMS.txt
             artifacts/test-results
           if-no-files-found: error

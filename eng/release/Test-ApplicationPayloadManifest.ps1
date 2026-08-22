@@ -4,7 +4,9 @@ param(
     [string]$PayloadRoot,
 
     [Parameter(Mandatory)]
-    [string]$ManifestPath
+    [string]$ManifestPath,
+
+    [string]$ExcludedTopLevelDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -88,6 +90,10 @@ foreach ($file in @($items | Where-Object { -not $_.PSIsContainer })) {
         throw "Payload file resolves outside its root: $fullPath"
     }
     $relativePath = $fullPath.Substring($rootWithSeparator.Length).Replace('\', '/')
+    if (-not [string]::IsNullOrWhiteSpace($ExcludedTopLevelDirectory) -and
+        $relativePath.StartsWith($ExcludedTopLevelDirectory.TrimEnd('/') + '/', [System.StringComparison]::OrdinalIgnoreCase)) {
+        continue
+    }
     $path = Get-NormalizedPayloadPath -Path $relativePath
     if ($actual.ContainsKey($path)) {
         throw "Payload contains duplicate or case-colliding files: $path"

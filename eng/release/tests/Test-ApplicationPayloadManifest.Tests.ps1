@@ -104,6 +104,12 @@ try {
     Assert-Rejected { & (Join-Path $releaseDirectory 'Test-ManagedPayloadContract.ps1') -PayloadRoot $payloadRoot -ContractPath $contractPath }
     Remove-Item -LiteralPath (Join-Path $payloadRoot 'unexpected.dll') -Force
 
+    New-Item -ItemType Directory -Path (Join-Path $payloadRoot 'native') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $payloadRoot 'native/native-candidate.json') -Value '{}' -NoNewline
+    & (Join-Path $releaseDirectory 'Test-ApplicationPayloadManifest.ps1') -PayloadRoot $payloadRoot -ManifestPath $manifestPath -ExcludedTopLevelDirectory 'native'
+    Assert-Rejected { & (Join-Path $releaseDirectory 'Test-ApplicationPayloadManifest.ps1') -PayloadRoot $payloadRoot -ManifestPath $manifestPath }
+    Remove-Item -LiteralPath (Join-Path $payloadRoot 'native') -Recurse -Force
+
     & (Join-Path $releaseDirectory 'New-ApplicationPayloadManifest.ps1') -PayloadRoot $payloadRoot -ManifestPath $manifestPath -ContractPath $contractPath
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
     $manifest.files += [pscustomobject]@{ path = 'hvp-WIN-x64.exe'; sha256 = $manifest.files[0].sha256 }

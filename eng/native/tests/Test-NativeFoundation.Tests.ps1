@@ -96,6 +96,8 @@ function Complete-ProductionFixture([string]$Root) {
     }
     $toolchain.packages = $packages
     $toolchain.packageDatabase = [pscustomobject]@{ path = 'var/lib/pacman/local'; sha256 = ('d' * 64); packageIds = @($toolchain.requiredPackageIds); evidence = 'Synthetic package database snapshot.' }
+    $toolchain.bootstrap = [pscustomobject]@{ tarSha256 = ('1' * 64); gpgSha256 = ('2' * 64); keyringTreeSha256 = ('3' * 64) }
+    $toolchain.closureStatus = 'verified'
     Save-Json $toolchain $toolchainPath
 
     $outputsPath = Join-Path $Root 'output-contract.json'
@@ -105,13 +107,15 @@ function Complete-ProductionFixture([string]$Root) {
         $output.sha256 = ('e' * 64)
         $output.peMachine = 'AMD64'
         $output.imports = @('KERNEL32.dll')
+        $output | Add-Member -NotePropertyName delayImports -NotePropertyValue @() -Force
         $output.exports = @("$($output.role)_fixture_export")
+        $output | Add-Member -NotePropertyName dllCharacteristics -NotePropertyValue '0x0140' -Force
         $output.apiVersion = $null
         $output.licenseConclusion = 'TEST-ONLY'
     }
     $libmpv = @($outputs.outputs | Where-Object role -eq 'libmpv')[0]
     $libmpv.apiVersion = '2.5'
-    $libmpv.exports = @('mpv_client_api_version','mpv_create','mpv_initialize','mpv_terminate_destroy')
+    $libmpv.exports = @('mpv_client_api_version','mpv_create','mpv_initialize','mpv_terminate_destroy','mpv_set_option_string','mpv_command','mpv_wait_event')
     $outputs.closureEvidence.recursiveImportsComplete = $true
     $outputs.closureEvidence.unexpectedDlls = [Collections.ArrayList]::new()
     $outputs.closureEvidence.systemDllAllowlistVersion = 'windows-system-dlls-v1'
@@ -129,6 +133,12 @@ try {
     $baseline = Copy-FixtureManifests 'baseline'
     Invoke-Lock $baseline -AllowIncomplete
     Assert-Rejected { Invoke-Lock $baseline } 'Production source provenance is incomplete'
+    Assert-Rejected {
+        & (Join-Path $scripts 'Invoke-NativeToolchainAcquisition.ps1') -DownloadDirectory (Join-Path $testRoot 'incomplete-toolchain') -ManifestPath (Join-Path $baseline 'toolchain.lock.json') -DownloadScript { throw 'must not download' }
+    } 'Production source provenance is incomplete'
+    Assert-Rejected {
+        & (Join-Path $scripts 'Install-NativeToolchain.ps1') -ArchiveDirectory (Join-Path $testRoot 'no-toolchain-archives') -InstallDirectory (Join-Path $testRoot 'toolchain-install') -TarPath (Get-Command tar.exe -ErrorAction Stop).Source -ManifestPath (Join-Path $baseline 'toolchain.lock.json')
+    } 'Production source provenance is incomplete'
     & (Join-Path $scripts 'Test-NativeSourceAcquisitionEvidence.ps1')
     $badAcquisitionEvidencePath = Join-Path $testRoot 'bad-source-acquisition-evidence.json'
     $badAcquisitionEvidence = Get-Content -LiteralPath (Join-Path $nativeRoot 'evidence/source-acquisition.json') -Raw | ConvertFrom-Json
@@ -349,11 +359,11 @@ try {
     $gitPath = (Get-Command git.exe -ErrorAction Stop).Source
     & (Join-Path $scripts 'Save-NativeEffectiveConfiguration.ps1') -OutputPath (Join-Path $effectiveRoot 'accepted.json') -Component libass -RequestedFlags @($policy.required.libass) -Evidence $evidence -CompilerPath $gitPath -LinkerPath $gitPath -PolicyPath (Join-Path $baseline 'native-policy.json')
     foreach ($kind in @($policy.effectiveEvidence.libass)) {
-        [IO.File]::WriteAllText((Join-Path $effectiveRoot "$kind.txt"), 'CONFIG_ICONV=0 isolated-target-search no-ambient-target-dependencies')
+        [IO.File]::WriteAllText((Join-Path $effectiveRoot "$kind.txt"), 'isolated-target-search no-ambient-target-dependencies')
     }
     Assert-Rejected {
         & (Join-Path $scripts 'Save-NativeEffectiveConfiguration.ps1') -OutputPath (Join-Path $effectiveRoot 'rejected.json') -Component libass -RequestedFlags @($policy.required.libass) -Evidence $evidence -CompilerPath $gitPath -LinkerPath $gitPath -PolicyPath (Join-Path $baseline 'native-policy.json')
-    } 'no-unapproved-enabled-features'
+    } 'CONFIG_ICONV=0'
 
     $archive = Join-Path $testRoot 'archive.bin'
     [IO.File]::WriteAllText($archive, 'approved archive')
