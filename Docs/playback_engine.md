@@ -12,7 +12,7 @@ Status: Proposed
 - Set initialization-only options before `mpv_initialize`.
 - Prefer `vo=gpu-next`, D3D11 output/context, `hwdec=auto-safe`, and automatic colorspace signaling.
 - Use structured command arrays for `loadfile` and other commands; never parse or escape user paths into a command string.
-- Observe only properties required to build the normalized playback snapshot, stream descriptor, and subtitle-track list.
+- Observe only properties required to build the normalized playback snapshot, stream descriptor, and audio/subtitle-track lists.
 - Treat unsupported/unknown properties as capability differences, not fatal errors.
 
 The first spike must validate exact option compatibility against the pinned mpv version; planned defaults are not frozen until that evidence exists.
@@ -24,12 +24,12 @@ The interface should cover:
 - initialize against a video-host handle;
 - open/stop and current item identity;
 - play/pause, absolute/relative seek, volume/mute, fullscreen intent;
-- enumerate/select audio and subtitle tracks;
+- enumerate/select video, audio, and subtitle tracks;
 - snapshot/event stream for state, time, duration, cache, video/audio descriptors, tracks, and errors;
 - diagnostic version/options/log export;
 - asynchronous, idempotent disposal.
 
-Keep commands semantic. UI code asks to `SelectSubtitle(trackId)` or `DisableSubtitles()` rather than setting raw mpv properties. Track IDs, title/language values, and stream facts are copied into immutable core models before UI dispatch.
+Keep commands semantic. UI code asks to select an audio or subtitle track rather than setting raw mpv properties. Track IDs, title/language values, and stream facts are copied into immutable core models before UI dispatch.
 
 ## Native ownership
 
@@ -44,7 +44,7 @@ Keep commands semantic. UI code asks to `SelectSubtitle(trackId)` or `DisableSub
 
 One long-lived event pump waits with cancellation-friendly intervals, converts mpv events, and emits immutable managed snapshots. A wakeup callback may signal the pump but performs no WPF work and never throws across the native boundary.
 
-Important events include file loaded, start/end file, property change, track changes, video reconfiguration, seek/playback restart, log message, and shutdown. `file-loaded` and track-change handling refresh the normalized stream descriptor and subtitle list. Duplicate/high-frequency time updates may be coalesced before reaching the UI.
+Important events include file loaded, start/end file, property change, video reconfiguration, seek/playback restart, log message, and shutdown. `file-loaded` captures the normalized stream descriptor and track lists. Observe only the track count and active video/audio/subtitle IDs so runtime track-list changes and explicit selection commands refresh the normalized selector state. Duplicate/high-frequency time updates may be coalesced before reaching the UI.
 
 ## Open and fallback flow
 

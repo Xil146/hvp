@@ -11,7 +11,7 @@ Keep the movie dominant and the controls predictable. The user should be able to
 The main window has two non-overlapping regions:
 
 1. A black native video surface hosted through `HwndHost`.
-2. A compact WPF control bar below it containing transport, seek, audio/subtitle selectors, volume, fullscreen, open-file, and stream status.
+2. A compact WPF control bar below it containing transport, seek, volume, open-file, and stream status.
 
 WPF controls must not be drawn over the native surface because `HwndHost` has airspace, clipping, opacity, and input limitations. Any future overlay requires a separately reviewed top-level-window design.
 
@@ -26,13 +26,15 @@ WPF controls must not be drawn over the native surface because `HwndHost` has ai
 ## Controls and behavior
 
 - Play/pause toggles the current state.
-- Seek shows elapsed and duration; dragging previews the target time and commits at an intentionally bounded rate.
+- Clicking the seek bar performs one immediate absolute seek to the clicked timestamp. Dragging the captured seek bar performs coalesced live absolute seeks, so a slow playback command never queues every intermediate pointer position. Pending seeks are discarded when the user stops playback or opens another file.
 - Volume uses 0-100 UI units, exposes mute, and persists globally.
 - Audio and subtitle selectors show language, title, codec/type, default/forced status, and external/embedded origin when available.
 - Subtitle selector always includes Off.
 - Status uses examples such as `HDR10 • 2160p • HEVC 10-bit` and exposes detailed diagnostics without claiming facts that are unknown.
 - Open File uses a local file dialog and supports drag/drop of one file. Multiple-file playlist semantics are out of scope.
-- Right-clicking the video surface opens a context menu. Its `Subtitles` submenu contains `Off` and each observed embedded or matching external subtitle track, with language/title details where available. The current selection is checked; unavailable track information is visibly unavailable rather than guessed.
+- Right-clicking the video surface opens a context menu. Its `Video` and `Audio` submenus contain every observed track of that type, and its `Subtitles` submenu contains `Off` and each observed embedded or matching external subtitle track. The selectors show language/title details where available, check the active choice, and show an unavailable state rather than guessing.
+- The context menu has an `Enter fullscreen` / `Exit fullscreen` action. There is no persistent fullscreen button in the control bar.
+- A single click on the native video surface toggles play/pause. A double click enters or exits fullscreen without also toggling playback.
 
 ## Keyboard
 

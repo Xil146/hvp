@@ -6,6 +6,8 @@ Status: Proposed
 
 Both embedded and external tracks are represented with a stable per-open ID, type, language, title, codec/format, default flag, forced flag, hearing-impaired/commentary hints when available, and origin. Native IDs remain internal to the playback adapter.
 
+The context-menu video and audio selectors list every observed track of their type and check the active track. The subtitle selector lists Off plus every observed subtitle track and checks the active choice. Neither selector invents labels or selection when libmpv cannot report them. The checked choice is refreshed from libmpv after a selection command completes.
+
 ## External subtitle discovery
 
 Search only the opened video's directory. For a video stem `Movie`, accept case-insensitive supported extensions when the subtitle basename is:

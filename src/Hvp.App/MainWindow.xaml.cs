@@ -9,7 +9,15 @@ public partial class MainWindow : System.Windows.Window
     private bool isFullscreen;
     private System.Windows.Rect normalBounds;
     private System.Windows.WindowState normalWindowState;
-    private System.Windows.Controls.ContextMenu? subtitleContextMenu;
+    private System.Windows.Controls.ContextMenu? videoContextMenu;
+    private bool isSeekDragging;
+    private bool seekCommandInFlight;
+    private (int Generation, double Percent)? pendingSeek;
+    private int seekGeneration;
+    private Task? seekDrainTask;
+    private bool isMediaTransition;
+    private Task mediaTransitionTask = Task.CompletedTask;
+    private int pendingMediaTransitions;
 
     public MainWindow()
     {
@@ -17,6 +25,8 @@ public partial class MainWindow : System.Windows.Window
         VideoHost.HandleCreated += VideoHost_HandleCreated;
         VideoHost.KeyPressed += VideoHost_KeyPressed;
         VideoHost.ContextMenuRequested += VideoHost_ContextMenuRequested;
+        VideoHost.VideoClicked += VideoHost_VideoClicked;
+        VideoHost.VideoDoubleClicked += VideoHost_VideoDoubleClicked;
         playback.SnapshotChanged += Playback_SnapshotChanged;
     }
 
@@ -63,14 +73,7 @@ public partial class MainWindow : System.Windows.Window
             return;
         }
 
-        try
-        {
-            await playback.OpenAsync(path);
-        }
-        catch (Exception exception)
-        {
-            ShowPlaybackError(exception.Message);
-        }
+        await QueueMediaTransitionAsync(() => playback.OpenAsync(path));
     }
 
     private void Window_PreviewDragOver(object sender, System.Windows.DragEventArgs e)
@@ -113,30 +116,149 @@ public partial class MainWindow : System.Windows.Window
 
     private async void Stop_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        try
-        {
-            await playback.StopAsync();
-        }
-        catch (Exception exception)
-        {
-            ShowPlaybackError(exception.Message);
-        }
+        await QueueMediaTransitionAsync(() => playback.StopAsync());
     }
 
-    private async void Seek_ValueChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<double> e)
+    private void SeekSlider_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (!videoHostReady || !SeekSlider.IsEnabled || !SeekSlider.IsMouseCaptureWithin)
+        if (!videoHostReady || !SeekSlider.IsEnabled || SeekSlider.ActualWidth <= 0)
         {
             return;
         }
 
+        isSeekDragging = true;
+        _ = SeekSlider.CaptureMouse();
+        UpdateSeekFromPointer(e.GetPosition(SeekSlider));
+        e.Handled = true;
+    }
+
+    private void SeekSlider_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!isSeekDragging)
+        {
+            return;
+        }
+
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+        {
+            EndSeekDrag();
+            return;
+        }
+
+        UpdateSeekFromPointer(e.GetPosition(SeekSlider));
+        e.Handled = true;
+    }
+
+    private void SeekSlider_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (!isSeekDragging)
+        {
+            return;
+        }
+
+        UpdateSeekFromPointer(e.GetPosition(SeekSlider));
+        EndSeekDrag();
+        e.Handled = true;
+    }
+
+    private void UpdateSeekFromPointer(System.Windows.Point point)
+    {
+        double ratio = Math.Clamp(point.X / SeekSlider.ActualWidth, 0, 1);
+        double percent = SeekSlider.Minimum + ((SeekSlider.Maximum - SeekSlider.Minimum) * ratio);
+        SeekSlider.Value = percent;
+        QueueSeek(percent);
+    }
+
+    private void EndSeekDrag()
+    {
+        isSeekDragging = false;
+        if (SeekSlider.IsMouseCaptured)
+        {
+            SeekSlider.ReleaseMouseCapture();
+        }
+    }
+
+    private void QueueSeek(double percent)
+    {
+        if (isMediaTransition)
+        {
+            return;
+        }
+
+        pendingSeek = (seekGeneration, percent);
+        if (!seekCommandInFlight)
+        {
+            seekDrainTask = ProcessSeekQueueAsync();
+        }
+    }
+
+    private async Task ProcessSeekQueueAsync()
+    {
+        seekCommandInFlight = true;
         try
         {
-            await playback.SeekToPercentAsync(e.NewValue);
+            while (!closeRequested && pendingSeek is { } pending)
+            {
+                pendingSeek = null;
+                if (pending.Generation != seekGeneration)
+                {
+                    continue;
+                }
+
+                await playback.SeekToPercentAsync(pending.Percent);
+            }
         }
         catch (Exception exception)
         {
             ShowPlaybackError(exception.Message);
+        }
+        finally
+        {
+            seekCommandInFlight = false;
+            if (!closeRequested && pendingSeek is { } pending && pending.Generation == seekGeneration)
+            {
+                seekDrainTask = ProcessSeekQueueAsync();
+            }
+        }
+    }
+
+    private async Task InvalidatePendingSeekAsync()
+    {
+        seekGeneration++;
+        pendingSeek = null;
+        EndSeekDrag();
+        if (seekDrainTask is not null)
+        {
+            await seekDrainTask;
+        }
+    }
+
+    private Task QueueMediaTransitionAsync(Func<Task> action)
+    {
+        Task previous = mediaTransitionTask;
+        pendingMediaTransitions++;
+        isMediaTransition = true;
+        Task next = ExecuteMediaTransitionAsync(previous, action);
+        mediaTransitionTask = next;
+        return next;
+    }
+
+    private async Task ExecuteMediaTransitionAsync(Task previous, Func<Task> action)
+    {
+        try
+        {
+            await previous;
+            await InvalidatePendingSeekAsync();
+            await action();
+        }
+        catch (Exception exception)
+        {
+            ShowPlaybackError(exception.Message);
+        }
+        finally
+        {
+            pendingMediaTransitions--;
+            isMediaTransition = pendingMediaTransitions > 0;
         }
     }
 
@@ -208,8 +330,6 @@ public partial class MainWindow : System.Windows.Window
         catch (Exception exception) { ShowPlaybackError(exception.Message); }
     }
 
-    private void Fullscreen_Click(object sender, System.Windows.RoutedEventArgs e) => ToggleFullscreen();
-
     private void ToggleFullscreen()
     {
         if (isFullscreen)
@@ -224,7 +344,6 @@ public partial class MainWindow : System.Windows.Window
         WindowStyle = System.Windows.WindowStyle.None;
         ResizeMode = System.Windows.ResizeMode.NoResize;
         WindowState = System.Windows.WindowState.Maximized;
-        FullscreenButton.Content = "Exit fullscreen";
     }
 
     private void ExitFullscreen()
@@ -243,40 +362,103 @@ public partial class MainWindow : System.Windows.Window
         Width = normalBounds.Width;
         Height = normalBounds.Height;
         WindowState = normalWindowState;
-        FullscreenButton.Content = "Fullscreen";
     }
 
     private void VideoHost_ContextMenuRequested(object? sender, EventArgs e)
     {
-        RequestSubtitleContextMenu();
+        RequestVideoContextMenu();
     }
 
     private void VideoHost_PreviewMouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         e.Handled = true;
-        RequestSubtitleContextMenu();
+        RequestVideoContextMenu();
     }
 
-    private void RequestSubtitleContextMenu()
+    private void VideoHost_VideoClicked(object? sender, EventArgs e)
     {
-        if (subtitleContextMenu?.IsOpen == true)
+        if (PlayPauseButton.IsEnabled)
+        {
+            _ = ExecuteShortcutAsync(() => playback.SetPausedAsync(playback.Snapshot.State is Hvp.Core.Playback.PlaybackState.Playing));
+        }
+    }
+
+    private void VideoHost_VideoDoubleClicked(object? sender, EventArgs e)
+    {
+        if (PlayPauseButton.IsEnabled)
+        {
+            ToggleFullscreen();
+        }
+    }
+
+    private void RequestVideoContextMenu()
+    {
+        if (videoContextMenu?.IsOpen == true)
         {
             return;
         }
 
         // Open after the input message has been processed. This works for both
         // the native child HWND and WPF's routed mouse-input fallback.
-        _ = Dispatcher.BeginInvoke(OpenSubtitleContextMenu);
+        _ = Dispatcher.BeginInvoke(OpenVideoContextMenu);
     }
 
-    private void OpenSubtitleContextMenu()
+    private void OpenVideoContextMenu()
     {
-        if (subtitleContextMenu?.IsOpen == true)
+        if (videoContextMenu?.IsOpen == true)
         {
             return;
         }
 
         System.Windows.Controls.ContextMenu menu = new();
+        System.Windows.Controls.MenuItem fullscreen = new() { Header = isFullscreen ? "Exit fullscreen" : "Enter fullscreen" };
+        fullscreen.Click += (_, _) => ToggleFullscreen();
+        menu.Items.Add(fullscreen);
+
+        System.Windows.Controls.MenuItem video = new() { Header = "Video" };
+        IReadOnlyList<Hvp.Core.Playback.VideoTrack> videoTracks = playback.Snapshot.VideoTracks ?? [];
+        if (videoTracks.Count == 0)
+        {
+            video.Items.Add(new System.Windows.Controls.MenuItem { Header = "No video tracks available", IsEnabled = false });
+        }
+        else
+        {
+            foreach (Hvp.Core.Playback.VideoTrack track in videoTracks)
+            {
+                System.Windows.Controls.MenuItem item = new()
+                {
+                    Header = track.IsExternal ? $"{track.Label} (external)" : track.Label,
+                    IsCheckable = true,
+                    IsChecked = playback.Snapshot.SelectedVideoTrackId == track.Id,
+                };
+                item.Click += async (_, _) => await SetVideoAsync(track.Id);
+                video.Items.Add(item);
+            }
+        }
+
+        menu.Items.Add(video);
+        System.Windows.Controls.MenuItem audio = new() { Header = "Audio" };
+        IReadOnlyList<Hvp.Core.Playback.AudioTrack> audioTracks = playback.Snapshot.AudioTracks ?? [];
+        if (audioTracks.Count == 0)
+        {
+            audio.Items.Add(new System.Windows.Controls.MenuItem { Header = "No audio tracks available", IsEnabled = false });
+        }
+        else
+        {
+            foreach (Hvp.Core.Playback.AudioTrack track in audioTracks)
+            {
+                System.Windows.Controls.MenuItem item = new()
+                {
+                    Header = track.IsExternal ? $"{track.Label} (external)" : track.Label,
+                    IsCheckable = true,
+                    IsChecked = playback.Snapshot.SelectedAudioTrackId == track.Id,
+                };
+                item.Click += async (_, _) => await SetAudioAsync(track.Id);
+                audio.Items.Add(item);
+            }
+        }
+
+        menu.Items.Add(audio);
         System.Windows.Controls.MenuItem subtitles = new() { Header = "Subtitles" };
         System.Windows.Controls.MenuItem off = new() { Header = "Off", IsCheckable = true, IsChecked = playback.Snapshot.SelectedSubtitleTrackId is null };
         off.Click += async (_, _) => await SetSubtitleAsync(null);
@@ -305,9 +487,9 @@ public partial class MainWindow : System.Windows.Window
         menu.Items.Add(subtitles);
         menu.PlacementTarget = VideoHost;
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
-        menu.Closed += (_, _) => subtitleContextMenu = null;
+        menu.Closed += (_, _) => videoContextMenu = null;
         VideoHost.ContextMenu = menu;
-        subtitleContextMenu = menu;
+        videoContextMenu = menu;
         menu.IsOpen = true;
     }
 
@@ -316,6 +498,30 @@ public partial class MainWindow : System.Windows.Window
         try
         {
             await playback.SetSubtitleAsync(trackId);
+        }
+        catch (Exception exception)
+        {
+            ShowPlaybackError(exception.Message);
+        }
+    }
+
+    private async Task SetAudioAsync(int trackId)
+    {
+        try
+        {
+            await playback.SetAudioAsync(trackId);
+        }
+        catch (Exception exception)
+        {
+            ShowPlaybackError(exception.Message);
+        }
+    }
+
+    private async Task SetVideoAsync(int trackId)
+    {
+        try
+        {
+            await playback.SetVideoAsync(trackId);
         }
         catch (Exception exception)
         {
@@ -363,6 +569,8 @@ public partial class MainWindow : System.Windows.Window
         playback.SnapshotChanged -= Playback_SnapshotChanged;
         VideoHost.KeyPressed -= VideoHost_KeyPressed;
         VideoHost.ContextMenuRequested -= VideoHost_ContextMenuRequested;
+        VideoHost.VideoClicked -= VideoHost_VideoClicked;
+        VideoHost.VideoDoubleClicked -= VideoHost_VideoDoubleClicked;
         _ = DisposeThenCloseAsync();
     }
 
