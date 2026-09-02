@@ -33,6 +33,18 @@ gh auth status
 
 The `-w` option opens GitHub's browser/device flow. Sign in as `Xil146` and authorize GitHub CLI. If you prefer SSH, configure an SSH key separately and then change `origin`; HTTPS is simplest here.
 
+Board-driven agents that only read Project items require the `read:project`
+scope. To let an authorized integrator move the current item's Status through
+the board flow, grant the additional `project` scope once for this Windows user:
+
+```powershell
+gh auth refresh -h github.com -s project
+```
+
+This permits Project management; it does not authorize unrelated repository
+writes. The workflow policy in `development_workflow.md` defines the gates an
+agent must satisfy before it changes a Status.
+
 ## 2. Verify and update a prepared branch
 
 From this repository:

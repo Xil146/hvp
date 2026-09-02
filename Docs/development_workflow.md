@@ -5,7 +5,7 @@ Status: Active process
 ## Board flow
 
 ```text
-Todo -> Design Check -> Design -> Ready -> In Progress -> Phase Review -> Test -> Done
+Todo -> Design Check -> Design -> Ready -> In Progress -> Review -> Test -> Done
                          |                    ^                   |
                          `---- not needed ----'                   `-> In Progress on failure
 ```
@@ -46,24 +46,72 @@ Definition of Ready:
 
 Use a focused branch named `feature/<issue>-slug`, `fix/<issue>-slug`, or `docs/<issue>-slug`. One person/agent owns integration. Keep WIP low: one implementation item per contributor plus review work.
 
-### Phase Review
+### Review
 
 Implement in larger coherent phases. During a phase, run focused tests and make
 small corrections without requesting a separate review for every action. At the
 end of the phase, self-review the complete diff, link the issue/design/evidence,
 and perform a short risk-focused independent review when the change touches
 native lifetime/threading, DLL loading, dependencies, packaging, HDR, or
-security. Review follows `AGENTS.md` priorities.
+security, or licensing. Review follows `AGENTS.md` priorities. A failure returns
+the item to In Progress with evidence.
 
 ### Test
 
-Run remaining integration, UI, clean-machine, GPU/HDR, receiver, or performance checks on the exact candidate artifact. Failures return to In Progress with evidence.
+Run only the remaining evidence named by the issue/design and required by the
+risk level. Failures return to In Progress with evidence.
 
 ### Done
 
 Merged to `main`; acceptance criteria and required evidence pass; designs/notices are current; follow-ups are tracked; issue/project status is closed.
 
+## Board-driven agent protocol
+
+A maintainer starts work by asking an integrator chat to take a named GitHub
+Project item. The integrator reads the issue and its current Status, chooses
+the lowest-cost role that can safely pass that stage, and keeps ownership of
+requirements, integration, status transitions, and the final report. It does
+not poll the board continuously.
+
+Once a maintainer has authorized board automation, the integrator may move the
+current item's Status as soon as the documented gate passes. It must not move
+an item past an unresolved product decision, missing required evidence, or a
+failed gate. Status changes are accompanied by a concise issue comment or
+linked PR/evidence when that record materially helps the next stage.
+
+### Stage routing and minimum evidence
+
+| Stage | Default lowest-cost role | Escalate when | Minimum gate/evidence |
+| --- | --- | --- | --- |
+| Todo | `hvp_scout` | outcome or acceptance criteria are ambiguous | task, scope, and observable acceptance criteria are present |
+| Design Check | `hvp_scout` | architecture, native, HDR, dependency, security, licensing, or hardware judgement is involved | record whether existing design is sufficient, no design impact exists, or Design is required |
+| Design | main/high-capability integrator; `hvp_scout` may research facts | a durable design decision is needed | updated component design and ADR where required; maintainer approval |
+| Ready | `hvp_scout` | affected boundary or validation is uncertain | affected files/components, validation level, and blockers are known |
+| In Progress | `hvp_worker` (Terra-medium) for a bounded, accepted design | native lifetime/threading, HDR, dependency/license, or cross-component ownership is involved | smallest coherent diff plus the focused evidence selected below |
+| Review | implementation-owner self-review | native lifetime/threading, DLL loading, dependencies, packaging, HDR, security, or licensing changed | independent `hvp_reviewer` review for those risks; otherwise self-review is sufficient |
+| Test | `hvp_worker` or integrator | hardware/manual or release evidence is required | only outstanding targeted checks; record the result |
+| Done | integrator | any acceptance criterion or required evidence is missing | merged change, passing stated evidence, and tracked follow-ups |
+
+Use the least evidence that can demonstrate the changed behavior:
+
+| Change risk | Required evidence |
+| --- | --- |
+| Editorial Markdown-only change | link/structure check and focused diff self-review; no test run or independent review |
+| Process/configuration change with no runtime effect | targeted parser/linter or configuration check when available, plus self-review |
+| Isolated managed behavior | focused unit/contract test at the changed boundary |
+| UI, persistence, packaging, or real playback integration | focused integration/UI/payload check plus the applicable automated tests |
+| HDR, GPU decoding, passthrough, display, or clean-machine claim | targeted automated checks and the matching manual hardware/clean-machine matrix evidence |
+
+Do not run a full solution suite merely because a task entered Test. Run it
+before a PR only when it is relevant to the changed area or required by branch
+protection/release policy. Never waive required native, security, licensing,
+or hardware evidence solely to reduce cost.
+
 ## Agent routing
+
+The stage policy above is the default for board-driven work. The following
+role-to-work mapping applies within a stage and for work that is not yet on the
+board.
 
 The main agent remains the integrator and keeps requirements/decisions in the primary context.
 
