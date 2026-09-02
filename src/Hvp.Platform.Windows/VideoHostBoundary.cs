@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Threading;
 
 namespace Hvp.Platform.Windows;
 
@@ -10,29 +10,20 @@ public sealed class VideoHost : HwndHost
 {
     private const int WsChild = unchecked((int)0x40000000);
     private const int WsVisible = 0x10000000;
-    private const int WhMouse = 7;
-    private const uint WmLButtonUp = 0x0202;
-    private const uint WmLButtonDblClk = 0x0203;
-    private const uint WmRButtonUp = 0x0205;
-    private readonly MouseHookProcedure mouseHookProcedure;
-    private readonly DispatcherTimer singleClickTimer;
-    private bool ignoreNextLeftButtonUp;
-    private int pendingVideoClicks;
-    private nint mouseHook;
-    private nint videoHostHandle;
-
-    public VideoHost()
-    {
-        mouseHookProcedure = MouseHookProc;
-        singleClickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime()) };
-        singleClickTimer.Tick += SingleClickTimer_Tick;
-    }
+    private const int SsNotify = 0x00000100;
+    private const int WmLButtonUp = 0x0202;
+    private const int WmLButtonDoubleClick = 0x0203;
+    private const int WmRButtonUp = 0x0205;
+    private const int WmDropFiles = 0x0233;
+    private bool suppressNextLeftButtonUp;
 
     public event EventHandler<nint>? HandleCreated;
 
     public event EventHandler<VideoHostKeyEventArgs>? KeyPressed;
 
-    public event EventHandler? ContextMenuRequested;
+    public event EventHandler<VideoHostContextMenuEventArgs>? ContextMenuRequested;
+
+    public event EventHandler<VideoHostFilesDroppedEventArgs>? FilesDropped;
 
     public event EventHandler? VideoClicked;
 
@@ -44,7 +35,7 @@ public sealed class VideoHost : HwndHost
             0,
             "STATIC",
             string.Empty,
-            WsChild | WsVisible,
+            WsChild | WsVisible | SsNotify,
             0,
             0,
             1,
@@ -61,15 +52,13 @@ public sealed class VideoHost : HwndHost
 
         try
         {
-            videoHostHandle = handle;
-            InstallMouseHook(handle);
+            DragAcceptFiles(handle, true);
             HandleCreated?.Invoke(this, handle);
             return new HandleRef(this, handle);
         }
         catch
         {
-            RemoveMouseHook();
-            videoHostHandle = nint.Zero;
+            DragAcceptFiles(handle, false);
             _ = DestroyWindow(handle);
             throw;
         }
@@ -77,14 +66,58 @@ public sealed class VideoHost : HwndHost
 
     protected override void DestroyWindowCore(HandleRef hwnd)
     {
-        singleClickTimer.Stop();
-        pendingVideoClicks = 0;
-        RemoveMouseHook();
-        videoHostHandle = nint.Zero;
+        suppressNextLeftButtonUp = false;
+        if (hwnd.Handle != nint.Zero)
+        {
+            DragAcceptFiles(hwnd.Handle, false);
+        }
+
         if (hwnd.Handle != nint.Zero && !DestroyWindow(hwnd.Handle))
         {
             throw new InvalidOperationException($"Could not destroy the video host window (Win32 error {Marshal.GetLastWin32Error()}).");
         }
+    }
+
+    protected override nint WndProc(nint hwnd, int msg, nint wParam, nint lParam, ref bool handled)
+    {
+        switch (msg)
+        {
+            case WmLButtonDoubleClick:
+                suppressNextLeftButtonUp = true;
+                VideoDoubleClicked?.Invoke(this, EventArgs.Empty);
+                handled = true;
+                return nint.Zero;
+
+            case WmLButtonUp:
+                if (suppressNextLeftButtonUp)
+                {
+                    suppressNextLeftButtonUp = false;
+                }
+                else
+                {
+                    VideoClicked?.Invoke(this, EventArgs.Empty);
+                }
+
+                handled = true;
+                return nint.Zero;
+
+            case WmRButtonUp:
+                NativePoint position = new(GetSignedLowWord(lParam), GetSignedHighWord(lParam));
+                if (ClientToScreen(hwnd, ref position))
+                {
+                    ContextMenuRequested?.Invoke(this, new VideoHostContextMenuEventArgs(position.X, position.Y));
+                }
+
+                handled = true;
+                return nint.Zero;
+
+            case WmDropFiles:
+                HandleFileDrop(wParam);
+                handled = true;
+                return nint.Zero;
+        }
+
+        return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
     }
 
     protected override bool TranslateAcceleratorCore(ref MSG msg, ModifierKeys modifiers)
@@ -102,104 +135,38 @@ public sealed class VideoHost : HwndHost
         return base.TranslateAcceleratorCore(ref msg, modifiers);
     }
 
-    private void InstallMouseHook(nint hwnd)
-    {
-        uint threadId = GetWindowThreadProcessId(hwnd, out _);
-        mouseHook = SetWindowsHookEx(WhMouse, mouseHookProcedure, nint.Zero, threadId);
-        if (mouseHook == nint.Zero)
-        {
-            throw new InvalidOperationException($"Could not install the video-host mouse handler (Win32 error {Marshal.GetLastWin32Error()}).");
-        }
-    }
-
-    private void RemoveMouseHook()
-    {
-        if (mouseHook != nint.Zero)
-        {
-            _ = UnhookWindowsHookEx(mouseHook);
-            mouseHook = nint.Zero;
-        }
-    }
-
-    private nint MouseHookProc(int code, nint wParam, nint lParam)
+    private void HandleFileDrop(nint dropHandle)
     {
         try
         {
-            if (code >= 0)
+            uint count = DragQueryFile(dropHandle, uint.MaxValue, null, 0);
+            List<string> paths = new(checked((int)count));
+            for (uint index = 0; index < count; index++)
             {
-                uint message = unchecked((uint)wParam.ToInt64());
-                MouseHookStruct mouse = Marshal.PtrToStructure<MouseHookStruct>(lParam);
-                if (!IsPointerOverVideoHost(mouse.X, mouse.Y))
+                uint length = DragQueryFile(dropHandle, index, null, 0);
+                StringBuilder path = new(checked((int)length + 1));
+                if (DragQueryFile(dropHandle, index, path, checked((uint)path.Capacity)) > 0)
                 {
-                    return CallNextHookEx(mouseHook, code, wParam, lParam);
-                }
-
-                switch (message)
-                {
-                    case WmRButtonUp:
-                        _ = Dispatcher.BeginInvoke(() => ContextMenuRequested?.Invoke(this, EventArgs.Empty));
-                        return new nint(1);
-                    case WmLButtonUp when ignoreNextLeftButtonUp:
-                        ignoreNextLeftButtonUp = false;
-                        return new nint(1);
-                    case WmLButtonUp:
-                        _ = Dispatcher.BeginInvoke(ArmSingleClick);
-                        return new nint(1);
-                    case WmLButtonDblClk:
-                        ignoreNextLeftButtonUp = true;
-                        _ = Dispatcher.BeginInvoke(() =>
-                        {
-                            if (pendingVideoClicks > 0)
-                            {
-                                pendingVideoClicks--;
-                            }
-
-                            if (pendingVideoClicks == 0)
-                            {
-                                singleClickTimer.Stop();
-                            }
-                            VideoDoubleClicked?.Invoke(this, EventArgs.Empty);
-                        });
-                        return new nint(1);
+                    paths.Add(path.ToString());
                 }
             }
+
+            FilesDropped?.Invoke(this, new VideoHostFilesDroppedEventArgs(paths));
         }
         catch
         {
-            // Never allow managed exceptions to escape the native hook procedure.
+            // A malformed native drop payload must not escape HwndHost's
+            // window procedure. DragFinish still releases the drop handle.
         }
-
-        return CallNextHookEx(mouseHook, code, wParam, lParam);
-    }
-
-    private void ArmSingleClick()
-    {
-        pendingVideoClicks++;
-        singleClickTimer.Stop();
-        singleClickTimer.Start();
-    }
-
-    private void SingleClickTimer_Tick(object? sender, EventArgs e)
-    {
-        singleClickTimer.Stop();
-        int clickCount = pendingVideoClicks;
-        pendingVideoClicks = 0;
-        if ((clickCount & 1) == 1)
+        finally
         {
-            VideoClicked?.Invoke(this, EventArgs.Empty);
+            DragFinish(dropHandle);
         }
     }
 
-    private bool IsPointerOverVideoHost(int x, int y)
-    {
-        if (videoHostHandle == nint.Zero)
-        {
-            return false;
-        }
+    private static int GetSignedLowWord(nint value) => unchecked((short)(value.ToInt64() & 0xffff));
 
-        nint target = WindowFromPoint(new NativePoint(x, y));
-        return target == videoHostHandle || (target != nint.Zero && IsChild(videoHostHandle, target));
-    }
+    private static int GetSignedHighWord(nint value) => unchecked((short)((value.ToInt64() >> 16) & 0xffff));
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern nint CreateWindowEx(
@@ -220,49 +187,25 @@ public sealed class VideoHost : HwndHost
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DestroyWindow(nint hwnd);
 
-    [StructLayout(LayoutKind.Sequential)]
-    private readonly struct MouseHookStruct
-    {
-        public readonly int X;
-        public readonly int Y;
-        public readonly nint Hwnd;
-        public readonly nuint HitTestCode;
-        public readonly nint ExtraInfo;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private readonly struct NativePoint(int x, int y)
-    {
-        public readonly int X = x;
-        public readonly int Y = y;
-    }
-
-    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-    private delegate nint MouseHookProcedure(int code, nint wParam, nint lParam);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern nint SetWindowsHookEx(int hookType, MouseHookProcedure procedure, nint module, uint threadId);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnhookWindowsHookEx(nint hook);
-
-    [DllImport("user32.dll")]
-    private static extern nint CallNextHookEx(nint hook, int code, nint wParam, nint lParam);
-
-    [DllImport("user32.dll")]
-    private static extern uint GetWindowThreadProcessId(nint hwnd, out uint processId);
-
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsChild(nint parent, nint child);
+    private static extern bool ClientToScreen(nint hwnd, ref NativePoint point);
 
-    [DllImport("user32.dll")]
-    private static extern nint WindowFromPoint(NativePoint point);
+    [DllImport("shell32.dll")]
+    private static extern void DragAcceptFiles(nint hwnd, [MarshalAs(UnmanagedType.Bool)] bool accept);
 
-    [DllImport("user32.dll")]
-    private static extern uint GetDoubleClickTime();
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint DragQueryFile(nint drop, uint fileIndex, StringBuilder? fileName, uint fileNameSize);
 
+    [DllImport("shell32.dll")]
+    private static extern void DragFinish(nint drop);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint(int x, int y)
+    {
+        public int X = x;
+        public int Y = y;
+    }
 }
 
 public sealed class VideoHostKeyEventArgs(Key key, ModifierKeys modifiers) : EventArgs
@@ -272,4 +215,18 @@ public sealed class VideoHostKeyEventArgs(Key key, ModifierKeys modifiers) : Eve
     public ModifierKeys Modifiers { get; } = modifiers;
 
     public bool Handled { get; set; }
+}
+
+/// <summary>Provides the native screen coordinates for a video-surface context menu.</summary>
+public sealed class VideoHostContextMenuEventArgs(int screenX, int screenY) : EventArgs
+{
+    public int ScreenX { get; } = screenX;
+
+    public int ScreenY { get; } = screenY;
+}
+
+/// <summary>Provides paths dropped directly on the native video surface.</summary>
+public sealed class VideoHostFilesDroppedEventArgs(IReadOnlyList<string> paths) : EventArgs
+{
+    public IReadOnlyList<string> Paths { get; } = paths;
 }
