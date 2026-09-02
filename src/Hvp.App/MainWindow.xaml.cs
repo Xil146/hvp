@@ -18,6 +18,8 @@ public partial class MainWindow : System.Windows.Window
     private bool isMediaTransition;
     private Task mediaTransitionTask = Task.CompletedTask;
     private int pendingMediaTransitions;
+    private bool? videoClickOriginalPaused;
+    private Task videoGestureTask = Task.CompletedTask;
 
     public MainWindow()
     {
@@ -25,6 +27,7 @@ public partial class MainWindow : System.Windows.Window
         VideoHost.HandleCreated += VideoHost_HandleCreated;
         VideoHost.KeyPressed += VideoHost_KeyPressed;
         VideoHost.ContextMenuRequested += VideoHost_ContextMenuRequested;
+        VideoHost.FilesDropped += VideoHost_FilesDropped;
         VideoHost.VideoClicked += VideoHost_VideoClicked;
         VideoHost.VideoDoubleClicked += VideoHost_VideoDoubleClicked;
         playback.SnapshotChanged += Playback_SnapshotChanged;
@@ -93,6 +96,16 @@ public partial class MainWindow : System.Windows.Window
         }
 
         string[]? paths = e.Data.GetData(System.Windows.DataFormats.FileDrop) as string[];
+        await HandleDroppedPathsAsync(paths);
+    }
+
+    private async void VideoHost_FilesDropped(object? sender, Hvp.Platform.Windows.VideoHostFilesDroppedEventArgs e)
+    {
+        await HandleDroppedPathsAsync(e.Paths);
+    }
+
+    private async Task HandleDroppedPathsAsync(IReadOnlyList<string>? paths)
+    {
         if (!Hvp.Core.Playback.LocalMediaDropValidator.TryGetSingleLocalVideoFile(paths, out string? fullPath, out string message))
         {
             ShowStatus(message);
@@ -364,22 +377,17 @@ public partial class MainWindow : System.Windows.Window
         WindowState = normalWindowState;
     }
 
-    private void VideoHost_ContextMenuRequested(object? sender, EventArgs e)
+    private void VideoHost_ContextMenuRequested(object? sender, Hvp.Platform.Windows.VideoHostContextMenuEventArgs e)
     {
-        RequestVideoContextMenu();
-    }
-
-    private void VideoHost_PreviewMouseRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        e.Handled = true;
-        RequestVideoContextMenu();
+        RequestVideoContextMenu(new System.Windows.Point(e.ScreenX, e.ScreenY));
     }
 
     private void VideoHost_VideoClicked(object? sender, EventArgs e)
     {
         if (PlayPauseButton.IsEnabled)
         {
-            _ = ExecuteShortcutAsync(() => playback.SetPausedAsync(playback.Snapshot.State is Hvp.Core.Playback.PlaybackState.Playing));
+            videoClickOriginalPaused = playback.Snapshot.State is Hvp.Core.Playback.PlaybackState.Paused;
+            QueueVideoPause(videoClickOriginalPaused.Value is false);
         }
     }
 
@@ -387,23 +395,53 @@ public partial class MainWindow : System.Windows.Window
     {
         if (PlayPauseButton.IsEnabled)
         {
+            // The first click is applied immediately. If Windows subsequently
+            // identifies the gesture as a double-click, restore that original
+            // playback state before performing only the fullscreen action.
+            if (videoClickOriginalPaused is bool originalPaused)
+            {
+                QueueVideoPause(originalPaused);
+                videoClickOriginalPaused = null;
+            }
+
             ToggleFullscreen();
         }
     }
 
-    private void RequestVideoContextMenu()
+    private void QueueVideoPause(bool paused)
+    {
+        videoGestureTask = ApplyVideoPauseAfterAsync(videoGestureTask, paused);
+    }
+
+    private async Task ApplyVideoPauseAfterAsync(Task previous, bool paused)
+    {
+        try
+        {
+            await previous;
+            if (!closeRequested)
+            {
+                await playback.SetPausedAsync(paused);
+            }
+        }
+        catch (Exception exception)
+        {
+            ShowPlaybackError(exception.Message);
+        }
+    }
+
+    private void RequestVideoContextMenu(System.Windows.Point screenPosition)
     {
         if (videoContextMenu?.IsOpen == true)
         {
             return;
         }
 
-        // Open after the input message has been processed. This works for both
-        // the native child HWND and WPF's routed mouse-input fallback.
-        _ = Dispatcher.BeginInvoke(OpenVideoContextMenu);
+        // Open after the child HWND input message has completed so the WPF
+        // popup can take focus without re-entering native message dispatch.
+        _ = Dispatcher.BeginInvoke(() => OpenVideoContextMenu(screenPosition));
     }
 
-    private void OpenVideoContextMenu()
+    private void OpenVideoContextMenu(System.Windows.Point screenPosition)
     {
         if (videoContextMenu?.IsOpen == true)
         {
@@ -485,10 +523,15 @@ public partial class MainWindow : System.Windows.Window
         }
 
         menu.Items.Add(subtitles);
+        // A mouse over HwndHost is not part of WPF's input tree, so MousePoint
+        // placement can leave this menu unopened. Place it explicitly using
+        // the child HWND's screen coordinates, converted to WPF device units.
+        System.Windows.Point hostPosition = VideoHost.PointFromScreen(screenPosition);
         menu.PlacementTarget = VideoHost;
-        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.RelativePoint;
+        menu.HorizontalOffset = hostPosition.X;
+        menu.VerticalOffset = hostPosition.Y;
         menu.Closed += (_, _) => videoContextMenu = null;
-        VideoHost.ContextMenu = menu;
         videoContextMenu = menu;
         menu.IsOpen = true;
     }
@@ -569,6 +612,7 @@ public partial class MainWindow : System.Windows.Window
         playback.SnapshotChanged -= Playback_SnapshotChanged;
         VideoHost.KeyPressed -= VideoHost_KeyPressed;
         VideoHost.ContextMenuRequested -= VideoHost_ContextMenuRequested;
+        VideoHost.FilesDropped -= VideoHost_FilesDropped;
         VideoHost.VideoClicked -= VideoHost_VideoClicked;
         VideoHost.VideoDoubleClicked -= VideoHost_VideoDoubleClicked;
         _ = DisposeThenCloseAsync();
@@ -578,6 +622,7 @@ public partial class MainWindow : System.Windows.Window
     {
         try
         {
+            await videoGestureTask;
             await playback.DisposeAsync();
         }
         finally

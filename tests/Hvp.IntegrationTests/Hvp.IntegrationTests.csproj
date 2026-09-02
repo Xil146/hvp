@@ -10,5 +10,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <ProjectReference Include="../../src/Hvp.App/Hvp.App.csproj" />
+    <ProjectReference Include="../../src/Hvp.Platform.Windows/Hvp.Platform.Windows.csproj" />
   </ItemGroup>
 </Project>
